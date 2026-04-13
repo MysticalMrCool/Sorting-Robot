@@ -1,105 +1,156 @@
 # Sorting Warehouse
 
-Griffith University 3003ICT - Programming for Robotics - Assessment 1 (Track B).
+Griffith University 3003ICT — Programming for Robotics — Assessment 1 (Track B).
 
-A vision-based autonomous sorting-warehouse robot, built in Webots R2025a.
+A vision-based autonomous sorting-warehouse robot, built in **Webots R2025a**.
 A single wheeled robot patrols the warehouse, classifies cargo with an on-board
-CNN, plans paths with A*, picks up items via a Supervisor teleport, and
+CNN, plans paths with A\*, picks up items via a Supervisor teleport, and
 delivers each item to the matching drop zone.
 
-## Architecture (Week 4 slide 17 - Behaviour Architecture Layering)
+## Quick Start (clone → run in 2 minutes)
 
-    Layer 1: Hardware control   -> controllers/sorting_robot/sorting_robot.py
-    Layer 2: Reactive logic     -> controllers/sorting_robot/behaviour_tree.py
-    Layer 3: AI enhancement     -> controllers/sorting_robot/inference.py
-                                   controllers/sorting_robot/model.py
+**Prerequisites:** Webots R2025a, Python 3.10+ on system PATH with `numpy`
+and `Pillow` installed.
 
-The behaviour tree is a priority selector over eight states: PATROL,
-APPROACH_TARGET, CLASSIFY, PICKUP, PLAN_DELIVERY, DELIVER, AVOID, FAIL_SAFE.
-The FSM structure (enum, enter_state helper, state_start_ms dwell timing)
-is a deliberate Python port of the Week 4 Workshop Smart-Security-Gate
-template.
+```
+pip install numpy Pillow
+```
 
-## Quick start
+1. Clone this repo.
+2. Open `worlds/sorting_warehouse.wbt` in Webots.
+3. Press **Play** ▶️. The controller is already wired up.
 
-Prerequisites: Webots R2025a and Python 3.10 or newer.
+That's it. The pre-trained CNN weights (`model_weights.npz`) are included in
+the repo. The robot uses a pure-numpy inference path at runtime — **no
+PyTorch required** to run the demo.
 
-1. Open `worlds/sorting_warehouse.wbt` in Webots.
-2. The controller is already wired up (`controller "sorting_robot"` on
-   the `DEF SORTING_ROBOT` node). Press Play.
-3. On the first run, no `model.pt` exists yet, so the classifier falls
-   back to its colour-histogram baseline. The robot will still
-   demonstrate the full pipeline - it's just using a dumb classifier.
+> **Note:** Webots uses your *system* Python, not any virtual environment.
+> The venv (`.venv/`) is only needed if you want to retrain the CNN.
 
-## Installing the Python dependencies
+## Architecture (Week 4 slide 17 — Behaviour Architecture Layering)
 
-From a terminal, inside this project directory:
+```
+Layer 1: Hardware control   → controllers/sorting_robot/sorting_robot.py
+Layer 2: Reactive logic     → controllers/sorting_robot/behaviour_tree.py
+Layer 3: AI enhancement     → controllers/sorting_robot/inference.py
+                               controllers/sorting_robot/model.py
+```
 
-    python -m venv .venv
-    .\.venv\Scripts\activate        # Windows
-    pip install -r requirements.txt
+The behaviour tree is a **Priority FSM** with **nine states**:
 
-Then point Webots at that Python interpreter (Tools -> Preferences ->
-General -> Python command) at `.venv\Scripts\python.exe`.
+| Priority | State | Purpose |
+|----------|-------|---------|
+| 1 (highest) | `FAIL_SAFE` | Stop, release held item, recover |
+| 2 | `AVOID` | Reactive obstacle avoidance (escalating) |
+| 3 | `DELIVER` | Follow A\* path to drop zone |
+| 4 | `PLAN_DELIVERY` | Run A\* from current position to target zone |
+| 5 | `PICKUP` | Supervisor-teleport item onto carry slot |
+| 6 | `CLASSIFY` | Stop, capture frame, run CNN majority vote |
+| 7 | `APPROACH_TARGET` | Drive toward visible cargo |
+| 8 | `PATROL` | Walk figure-8 waypoint loop |
+| 9 (lowest) | `COMPLETE` | All cargo delivered — mission finished |
 
-## Training the CNN (optional - not required for the demo)
+The FSM structure (`enum`, `enter_state` helper, `state_start_ms` dwell
+timing) is a deliberate Python port of the Week 4 Workshop
+Smart-Security-Gate template.
 
-1. Open `worlds/sorting_warehouse.wbt`, temporarily change the
-   `SORTING_ROBOT` controller field from `"sorting_robot"` to
-   `"data_collector"` and save. Press Play and let it run for 2-3
-   simulated minutes. Frames get saved into
-   `controllers/data_collector/data/<category>/`.
-2. Restore the controller field to `"sorting_robot"`.
-3. Train:
+## Classification Approach
 
-       cd controllers\sorting_robot
-       python train.py --data ..\data_collector\data --epochs 20
+The CNN classifies cargo into four categories: **fragile**, **standard**,
+**hazardous**, and **unknown**.
 
-   This writes `model.pt` next to `train.py`. The next time you run
-   the Webots simulation, `inference.py` will pick it up automatically
-   and use the CNN instead of the colour-histogram fallback.
+During approach, the robot captures frames at **strategic distance
+checkpoints** (0.40 m, 0.35 m, 0.30 m, 0.25 m) plus one dwell frame after
+stopping — **5 frames total per item**. A confidence-weighted majority vote
+across all frames produces the final classification. This avoids the
+problems of single-frame close-range classification (where large items like
+barrels fill the entire frame).
+
+Three-tier inference fallback:
+1. **PyTorch CNN** — if `model.pt` + torch are available (training env)
+2. **Numpy CNN** — pure-numpy forward pass using `model_weights.npz` (runtime default)
+3. **Colour histogram** — basic heuristic if no weights are found
 
 ## Files
 
-    worlds/
-        sorting_warehouse.wbt       Webots R2025a world - arena, cargo,
-                                    drop zones, obstacles, robot
+```
+worlds/
+    sorting_warehouse.wbt           Webots R2025a world
 
-    controllers/sorting_robot/      Main controller
-        sorting_robot.py            Layer 1 - hardware wrapper + main loop
-        behaviour_tree.py           Layer 2 - BT + FSM (Week 4 pattern)
-        pathfinding.py              A* with f = g + h (Week 6)
-        inference.py                CNN wrapper + colour-histogram fallback
-        model.py                    PyTorch CNN definition
-        train.py                    Offline trainer
+controllers/sorting_robot/         Main controller
+    sorting_robot.py                Layer 1 — hardware wrapper + main loop
+    behaviour_tree.py               Layer 2 — Priority FSM (9 states, Wk04)
+    pathfinding.py                  A* with f = g + h (Wk06)
+    inference.py                    CNN wrapper + fallback chain
+    model.py                        PyTorch CNN definition (SortingCNN)
+    model_weights.npz               Pre-trained numpy weights (included in repo)
+    train.py                        Offline CNN trainer (requires venv)
+    model.pt                        PyTorch checkpoint (gitignored — too large)
 
-    controllers/data_collector/
-        data_collector.py           Auto-labelled training data collector
-                                    (uses Camera Recognition as oracle)
+controllers/data_collector/
+    data_collector.py               Auto-labelled training data collector
+                                    (Supervisor teleportation + Recognition API)
 
-    requirements.txt                Python deps (numpy required, torch optional)
+requirements.txt                    Python deps for training (venv only)
+```
 
-## Rubric alignment (quick map for the report)
+## Retraining the CNN (optional)
 
-    Technical complexity (30%)  -> CNN + A* + BT + supervisor pick-and-place
-    Architecture (15%)          -> Three-layer diagram from Week 4 slide 17
-    Behaviour & control (15%)   -> 8-state BT, Week 4 Workshop code pattern
-    Safety / fail-safe (10%)    -> AVOID and FAIL_SAFE states; Week 9 phrasing
-    Code quality (10%)          -> Modular split, type hints, defensive startup
-    Video (5%)                  -> 3-5 minute Webots run
-    Individual (5%)             -> Per-member ownership split (see below)
-    Advanced (10%)              -> Hybrid BT+CNN; auto-labelled training set
+Group members do **not** need to retrain to run the demo. The numpy weights
+are already included. If you want to retrain:
 
-## Suggested individual work split for the group
+1. Create and activate a venv:
+   ```
+   python -m venv .venv
+   .\.venv\Scripts\activate        # Windows
+   pip install -r requirements.txt
+   ```
+2. Collect training data — change the `SORTING_ROBOT` controller field to
+   `"data_collector"`, press Play, let it run for ~2–3 simulated minutes.
+3. Train:
+   ```
+   cd controllers\sorting_robot
+   python train.py --data ..\data_collector\data --epochs 20
+   ```
+4. Export numpy weights (so the runtime can use them without PyTorch):
+   ```python
+   import torch, numpy as np
+   state = torch.load('model.pt', map_location='cpu')
+   np.savez('model_weights.npz', **{k: v.numpy() for k, v in state.items()})
+   ```
 
-    Member A - data collection + offline training + model.pt
-    Member B - behaviour_tree.py tuning + demo staging + video
-    Member C - pathfinding.py + report
-    Member D - sorting_warehouse.wbt dressing + architecture diagram + report
+## Debug Logging
 
-## Inputs / outputs (rubric floor: >=2 each)
+Verbose debug output is controlled by a `DEBUG` flag at the top of each
+module. Set `DEBUG = True` in `sorting_robot.py`, `behaviour_tree.py`, or
+`inference.py` to enable detailed logging for that layer. By default all
+debug output is off for a clean demo console.
 
-Inputs  (7): camera, ds_left, ds_right, gps, compass, left wheel sensor,
-             right wheel sensor
+## Rubric Alignment
 
-Outputs (3): left wheel motor, right wheel motor, supervisor teleport
+| Criterion | Where |
+|-----------|-------|
+| Technical complexity (30%) | CNN + A\* + BT + supervisor pick-and-place |
+| Architecture (15%) | Three-layer diagram from Wk04 slide 17 |
+| Behaviour & control (15%) | 9-state Priority FSM, Wk04 Workshop pattern |
+| Safety / fail-safe (10%) | AVOID and FAIL\_SAFE states; Wk09 phrasing |
+| Code quality (10%) | Modular split, type hints, defensive startup |
+| Video (5%) | 3–5 minute Webots run |
+| Individual (5%) | Per-member ownership split (see below) |
+| Advanced (10%) | Hybrid BT+CNN; auto-labelled training set |
+
+## Suggested Individual Work Split
+
+| Member | Scope |
+|--------|-------|
+| A | Data collection + offline training + model.pt |
+| B | behaviour\_tree.py tuning + demo staging + video |
+| C | pathfinding.py + report |
+| D | sorting\_warehouse.wbt dressing + architecture diagram + report |
+
+## Inputs / Outputs (rubric floor: ≥2 each)
+
+**Inputs (7):** camera, ds\_left, ds\_right, gps, compass, left wheel sensor,
+right wheel sensor
+
+**Outputs (3):** left wheel motor, right wheel motor, supervisor teleport

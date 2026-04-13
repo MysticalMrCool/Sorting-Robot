@@ -1,11 +1,13 @@
-# Python dependencies for the sorting_robot controller and trainer.
-# Install with:  pip install -r requirements.txt
+# Python dependencies for OFFLINE CNN TRAINING (venv only).
+# The Webots controller runs on system Python and only needs numpy + Pillow,
+# which should be installed globally:  pip install numpy Pillow
 #
-# Core (required by the Webots controller):
+# To set up the training venv:
+#   python -m venv .venv
+#   .\.venv\Scripts\activate
+#   pip install -r requirements.txt
+#
 numpy>=1.24
-
-# CNN training and inference (optional - inference.py has a colour-histogram
-# fallback if these aren't installed, so the controller will still run):
 torch>=2.0
 torchvision>=0.15
 Pillow>=10.0

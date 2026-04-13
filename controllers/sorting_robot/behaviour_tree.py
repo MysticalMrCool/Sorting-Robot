@@ -44,6 +44,9 @@ which drop zone is the goal.
 from enum import Enum, auto
 import math
 
+# Debug logging toggle — set True for verbose FSM state/classify output
+DEBUG = False
+
 
 # -----------------------------------------------------------------------------
 # Tuning constants (pull these up here so markers can read the whole policy
@@ -150,6 +153,7 @@ class PriorityFSM:
         self._next_frame_idx = 0             # index into CLASSIFY_FRAME_DISTANCES
         self._classify_dwell_captured = False # single dwell frame flag
         self._zone_drop_count = {}           # items delivered per zone (for offset)
+        self._complete_logged = False         # one-shot flag for MISSION COMPLETE
 
         self.robot.log("[FSM] initialised in PATROL")
 
@@ -157,7 +161,7 @@ class PriorityFSM:
 
     def enter_state(self, new_state: State) -> None:
         """Equivalent of lecturer's:  enterState(State s) { currentState = s; stateStartMs = millis(); }"""
-        if new_state != self.current_state:
+        if new_state != self.current_state and DEBUG:
             self.robot.log(f"[FSM] {self.current_state.name} -> {new_state.name}")
         self.current_state = new_state
         self.state_start_ms = self.robot.now_ms()
@@ -302,18 +306,19 @@ class PriorityFSM:
             return
 
         # Debug: save frames so we can inspect what the CNN sees
-        try:
-            import os, numpy as np
-            from PIL import Image as PILImage
-            debug_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "debug_frames")
-            os.makedirs(debug_dir, exist_ok=True)
-            name = self.active_cargo_def or "unknown"
-            for i, frame in enumerate(frames):
-                path = os.path.join(debug_dir, f"{name}_frame{i}.png")
-                PILImage.fromarray(frame).save(path)
-            self.robot.log(f"[FSM] saved {len(frames)} debug frames for {name}")
-        except Exception as e:
-            self.robot.log(f"[FSM] debug frame save failed: {e}")
+        if DEBUG:
+            try:
+                import os, numpy as np
+                from PIL import Image as PILImage
+                debug_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "debug_frames")
+                os.makedirs(debug_dir, exist_ok=True)
+                name = self.active_cargo_def or "unknown"
+                for i, frame in enumerate(frames):
+                    path = os.path.join(debug_dir, f"{name}_frame{i}.png")
+                    PILImage.fromarray(frame).save(path)
+                self.robot.log(f"[FSM] saved {len(frames)} debug frames for {name}")
+            except Exception as e:
+                self.robot.log(f"[FSM] debug frame save failed: {e}")
 
         # Confidence-weighted vote across the ~5 strategically-captured frames
         score = {}  # cat -> total confidence
@@ -329,7 +334,8 @@ class PriorityFSM:
             category = "unknown"
         votes = {k: round(v, 2) for k, v in score.items()}
 
-        self.robot.log(f"[FSM] classify votes: {votes}")
+        if DEBUG:
+            self.robot.log(f"[FSM] classify votes: {votes}")
         self.active_category = category
         self.active_zone = CATEGORY_TO_ZONE.get(category, "drop_unknown")
         self.robot.log(f"[FSM] classified {self.active_cargo_def} as '{category}' -> {self.active_zone}")
@@ -383,7 +389,8 @@ class PriorityFSM:
             return
         self.active_path = path
         self.active_path_index = 0
-        self.robot.log(f"[FSM] planned path with {len(path)} waypoints to {self.active_zone}")
+        if DEBUG:
+            self.robot.log(f"[FSM] planned path with {len(path)} waypoints to {self.active_zone}")
         self.enter_state(State.DELIVER)
 
     def _do_deliver(self) -> None:
@@ -477,8 +484,9 @@ class PriorityFSM:
     def _do_complete(self) -> None:
         """All cargo has been delivered. Stop and log mission complete."""
         self.robot.stop()
-        if self.time_in_state_ms() < 100:
+        if not self._complete_logged:
             self.robot.log("[FSM] === MISSION COMPLETE === All cargo delivered.")
+            self._complete_logged = True
 
     # ---------- Low-level motion primitive -----------------------------------
 

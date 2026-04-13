@@ -11,6 +11,9 @@ __pycache__/
 controllers/data_collector/data/
 controllers/sorting_robot/model.pt
 
+# Debug output (regenerated each run)
+controllers/sorting_robot/debug_frames/
+
 # OS files
 .DS_Store
 Thumbs.db

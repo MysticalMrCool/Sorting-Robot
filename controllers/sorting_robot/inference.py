@@ -26,6 +26,9 @@ from __future__ import annotations
 import os
 from typing import Any, Optional
 
+# Debug logging toggle — set True for per-frame classification output
+DEBUG = False
+
 from model import CATEGORIES, INPUT_SIZE
 
 try:
@@ -184,7 +187,7 @@ class Classifier:
 
     # ---------- Numpy CNN path ------------------------------------------------
 
-    def _classify_numpy_cnn(self, image: Any) -> str:
+    def _classify_numpy_cnn(self, image: Any) -> tuple:
         img = image.astype(np.float32)
         if img.max() > 1.5:
             img /= 255.0
@@ -197,8 +200,9 @@ class Classifier:
         idx = int(np.argmax(probs))
         conf = float(probs[idx])
         # Debug: log all class probabilities
-        prob_str = ", ".join(f"{CATEGORIES[i]}={probs[i]:.3f}" for i in range(len(CATEGORIES)))
-        print(f"[inference] numpy_cnn: [{prob_str}] -> {CATEGORIES[idx]} ({conf:.3f})", flush=True)
+        if DEBUG:
+            prob_str = ", ".join(f"{CATEGORIES[i]}={probs[i]:.3f}" for i in range(len(CATEGORIES)))
+            print(f"[inference] numpy_cnn: [{prob_str}] -> {CATEGORIES[idx]} ({conf:.3f})", flush=True)
         if conf < 0.5:
             return ("unknown", conf)
         return (CATEGORIES[idx], conf)
