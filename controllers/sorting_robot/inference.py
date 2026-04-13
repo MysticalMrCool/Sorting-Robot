@@ -17,8 +17,8 @@ while training happens in a venv.  The numpy forward pass replicates the
 SortingCNN architecture (3 conv blocks + 2 FC layers) using only numpy
 operations, so the trained model works at runtime regardless.
 
-Wk09 Drone lecture "fail-safe" principle: the system defaults to a safe,
-still-useful state when something goes wrong.
+Fail-safe principle: the system defaults to a safe, still-useful state
+when something goes wrong.
 """
 
 from __future__ import annotations

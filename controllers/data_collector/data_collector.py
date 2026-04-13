@@ -27,10 +27,6 @@ Output layout (picked up by controllers/sorting_robot/train.py):
         hazardous/   (...)
         unknown/     (...)
 
-Wk04-EmbeddedAI slide 12: "Rule-based and learning systems can coexist."
-We use Supervisor-based pose placement + Recognition labelling to
-bootstrap a learning system with zero manual annotation.
-
 Usage:
   1. Set the Robot's controller field to "data_collector" in the scene tree.
   2. File -> Revert World, then press Run. Wait for "DONE" in console.

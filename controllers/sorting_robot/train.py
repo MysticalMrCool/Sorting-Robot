@@ -28,9 +28,6 @@ from a terminal:
 
 It writes `model.pt` next to this file, which inference.py picks up on
 the next Webots launch.
-
-Wk04-EmbeddedAI slide 12: "Rule-based and learning systems can coexist
-in embedded robotics." This trainer is the "learning" half of that quote.
 """
 
 from __future__ import annotations

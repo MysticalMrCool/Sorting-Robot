@@ -27,7 +27,7 @@ PyTorch required** to run the demo.
 > **Note:** Webots uses your *system* Python, not any virtual environment.
 > The venv (`.venv/`) is only needed if you want to retrain the CNN.
 
-## Architecture (Week 4 slide 17 — Behaviour Architecture Layering)
+## Architecture
 
 ```
 Layer 1: Hardware control   → controllers/sorting_robot/sorting_robot.py
@@ -51,8 +51,8 @@ The behaviour tree is a **Priority FSM** with **nine states**:
 | 9 (lowest) | `COMPLETE` | All cargo delivered — mission finished |
 
 The FSM structure (`enum`, `enter_state` helper, `state_start_ms` dwell
-timing) is a deliberate Python port of the Week 4 Workshop
-Smart-Security-Gate template.
+timing) follows the same pattern as the Workshop 4 Smart-Security-Gate
+template.
 
 ## Classification Approach
 
@@ -79,8 +79,8 @@ worlds/
 
 controllers/sorting_robot/         Main controller
     sorting_robot.py                Layer 1 — hardware wrapper + main loop
-    behaviour_tree.py               Layer 2 — Priority FSM (9 states, Wk04)
-    pathfinding.py                  A* with f = g + h (Wk06)
+    behaviour_tree.py               Layer 2 — Priority FSM (9 states)
+    pathfinding.py                  A* grid planner
     inference.py                    CNN wrapper + fallback chain
     model.py                        PyTorch CNN definition (SortingCNN)
     model_weights.npz               Pre-trained numpy weights (included in repo)
@@ -131,9 +131,9 @@ debug output is off for a clean demo console.
 | Criterion | Where |
 |-----------|-------|
 | Technical complexity (30%) | CNN + A\* + BT + supervisor pick-and-place |
-| Architecture (15%) | Three-layer diagram from Wk04 slide 17 |
-| Behaviour & control (15%) | 9-state Priority FSM, Wk04 Workshop pattern |
-| Safety / fail-safe (10%) | AVOID and FAIL\_SAFE states; Wk09 phrasing |
+| Architecture (15%) | Three-layer split (hardware / reactive / AI) |
+| Behaviour & control (15%) | 9-state Priority FSM |
+| Safety / fail-safe (10%) | AVOID and FAIL\_SAFE states |
 | Code quality (10%) | Modular split, type hints, defensive startup |
 | Video (5%) | 3–5 minute Webots run |
 | Individual (5%) | Per-member ownership split (see below) |

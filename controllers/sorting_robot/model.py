@@ -15,14 +15,13 @@ frames into four warehouse cargo categories:
 The network is intentionally small (~150k parameters) so:
   - it trains in minutes on a laptop CPU
   - inference cost is negligible compared to the Webots physics step
-  - students can understand every layer
+  - every layer is easy to understand
 
-Wk07-Vision pipeline ordering (for the report):
-    Camera Image -> Grayscale (optional) -> Noise Filtering ->
-    Thresholding -> Edge Detection -> Object Identification -> Decision
+Conceptually follows the vision pipeline from lectures:
+    Camera Image -> Filtering -> Feature Extraction -> Classification
 
-Our CNN collapses the middle stages into learned convolution filters but
-the conceptual order is preserved.
+The CNN learns the filtering and feature extraction stages via
+convolution filters rather than doing them manually.
 """
 
 from typing import List

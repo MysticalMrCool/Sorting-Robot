@@ -6,8 +6,8 @@ Griffith 3003ICT - Programming for Robotics - Assessment 1
 Track B - Autonomous Sorting Warehouse Robot
 
 This module implements the robot's decision layer as a Priority-based Finite
-State Machine (Priority FSM) with nine states. The code pattern is a deliberate
-Python port of the canonical Week 4 Workshop Smart-Security-Gate FSM template:
+State Machine (Priority FSM) with nine states. The code pattern is based on
+the Workshop 4 Smart-Security-Gate FSM template:
 
     enum State { ... };
     State currentState = ...;
@@ -19,26 +19,22 @@ Python port of the canonical Week 4 Workshop Smart-Security-Gate FSM template:
 
 In Python we use an Enum, `self.current_state`, `self.state_start_ms`, and
 `self.enter_state(s)`. `millis()` is replaced by the Webots simulation clock
-(`robot.getTime() * 1000`) which is the non-blocking equivalent recommended
-in Week 5.
+(`robot.getTime() * 1000`).
 
-Architecture (Week 4 slide 17 - Behaviour Architecture Layering):
+Three-layer architecture (behaviour layering model from lectures):
     Layer 1: Hardware control   -> sorting_robot.py
     Layer 2: Reactive logic     -> this file (Priority FSM)
     Layer 3: AI enhancement     -> inference.py (CNN)
 
-Priority selector order (highest priority first). The top of tick() acts
-as a priority-interrupt mechanism: higher-priority conditions can pre-empt
-the current state. This is a flat FSM with priority interrupts (Wk04),
-not a hierarchical Behaviour Tree (Wk08).
+Priority selector order (highest first). The top of tick() acts as a
+priority-interrupt mechanism: higher-priority conditions can pre-empt
+the current state.
 
     FAIL_SAFE  ->  AVOID  ->  DELIVER  ->  PLAN_DELIVERY  ->
     PICKUP  ->  CLASSIFY  ->  APPROACH_TARGET  ->  PATROL  ->  COMPLETE
 
-Quoting Wk04-EmbeddedAI slide 12: "Rule-based and learning systems can
-coexist in embedded robotics." The rule-based FSM drives behaviour; the CNN
-in inference.py provides the classification fact the FSM uses to decide
-which drop zone is the goal.
+The rule-based FSM drives behaviour; the CNN in inference.py provides the
+classification fact the FSM uses to decide which drop zone is the goal.
 """
 
 from enum import Enum, auto
@@ -84,9 +80,7 @@ CATEGORY_TO_ZONE = {
 
 
 # -----------------------------------------------------------------------------
-# State enum - mirror of Wk04-Workshop slide 13:
-#     enum State { DISARMED, ARMED_IDLE, MOTION_DETECTED, ... };
-# We have nine states, well above the rubric minimum of four.
+# State enum
 # -----------------------------------------------------------------------------
 
 class State(Enum):
@@ -157,10 +151,10 @@ class PriorityFSM:
 
         self.robot.log("[FSM] initialised in PATROL")
 
-    # ---------- Canonical enter_state helper (Wk04-Workshop slide 13) --------
+    # ---------- enter_state helper (same pattern as the Workshop 4 gate) ----
 
     def enter_state(self, new_state: State) -> None:
-        """Equivalent of lecturer's:  enterState(State s) { currentState = s; stateStartMs = millis(); }"""
+        """enterState(s) { currentState = s; stateStartMs = millis(); }"""
         if new_state != self.current_state and DEBUG:
             self.robot.log(f"[FSM] {self.current_state.name} -> {new_state.name}")
         self.current_state = new_state
@@ -175,10 +169,9 @@ class PriorityFSM:
         """
         One cycle of the FSM. Called once per robot.step() by sorting_robot.py.
 
-        This function first runs the priority selector - higher-priority
-        conditions can interrupt lower-priority ones. Then it executes the
-        action associated with the resulting state. This is a flat FSM with
-        priority interrupts (Wk04), not a hierarchical Behaviour Tree (Wk08).
+        Runs the priority selector first (higher-priority conditions can
+        interrupt lower-priority ones), then executes the current state's
+        action handler.
         """
         # --- Priority selector ------------------------------------------------
         # 0. COMPLETE is terminal - nothing can interrupt it
@@ -284,8 +277,8 @@ class PriorityFSM:
         """
         Stop, collect camera frames during the dwell period, then classify
         using majority vote across multiple frames for robustness.
-        Wk07-Vision: "The CNN does NOT decide what to do.
-        Perception gives facts. Decision gives intention."
+        The CNN provides a classification fact; the FSM decides what to do
+        with it.
         """
         self.robot.stop()
         # Capture a single frame once the camera has settled after stopping
@@ -362,8 +355,7 @@ class PriorityFSM:
 
     def _do_plan_delivery(self) -> None:
         """
-        Run A* from current GPS cell to the matching drop zone. Wk06 A*:
-            f(n) = g(n) + h(n)
+        Run A* from current GPS cell to the matching drop zone.
         Stamps undelivered cargo items as dynamic obstacles so the planner
         routes around them instead of driving through them.
         """
@@ -463,9 +455,8 @@ class PriorityFSM:
 
     def _do_fail_safe(self) -> None:
         """
-        Wk09 Drone slide 11 (verbatim): "The system defaults to a safe state
-        when something goes wrong." We stop, release any held item on the
-        spot, log, and after a dwell, return to patrol.
+        Safe-state recovery: stop, release any held item on the spot, and
+        after a dwell, return to patrol.
         """
         self.robot.stop()
         # Drop held item immediately so we don't carry it forever

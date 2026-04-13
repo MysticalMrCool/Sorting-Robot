@@ -5,25 +5,24 @@ sorting_robot.py - Layer 1: Hardware Control + Main Loop
 Griffith 3003ICT - Programming for Robotics - Assessment 1
 Track B - Autonomous Sorting Warehouse Robot (Webots R2025a)
 
-Wk04-EmbeddedAI slide 17 - Behaviour Architecture Layering (verbatim):
+Three-layer architecture (based on the behaviour layering model from lectures):
     Layer 1: Hardware control   <- THIS FILE
     Layer 2: Reactive logic     <- behaviour_tree.py
     Layer 3: AI enhancement     <- inference.py + model.py
 
-Wk05-Webots control loop pattern:
+Main loop follows the standard Webots control pattern:
     while robot.step(TIME_STEP) != -1:
         read_sensors()
         update_state()
         execute_state()
 
-This file is the thin Webots-API wrapper. It deliberately does no decision
-making - it just exposes a clean object (`RobotAPI`) that the behaviour
-tree can call without knowing anything about Webots.
+This file is the Webots-API wrapper. It doesn't do any decision making —
+just exposes a clean object (`RobotAPI`) that the behaviour tree can call
+without knowing anything about Webots.
 
-Defensive-startup rules from the project brief:
-  - All prints use flush=True so the Webots console shows output immediately
-  - Heavy imports (torch, numpy) are wrapped in try/except and fall through
-    to safe defaults so the controller still runs on a barebones Python
+All prints use flush=True so the Webots console shows output immediately.
+Heavy imports (torch, numpy) are wrapped in try/except so the controller
+still runs on a barebones Python install.
 """
 
 from __future__ import annotations
@@ -484,7 +483,7 @@ def main() -> None:
     bt = PriorityFSM(api, classifier, planner)
     _boot_log("priority FSM ready - entering main loop")
 
-    # ---- Wk05 main control loop ---------------------------------------------
+    # ---- Main control loop ------------------------------------------------
     # readSensors() -> updateState() -> executeState()
     DEBUG = False
     tick_count = 0

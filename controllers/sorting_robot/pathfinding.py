@@ -4,7 +4,7 @@ pathfinding.py - A* Path Planner
 
 Griffith 3003ICT - Programming for Robotics - Assessment 1
 
-Wk06-AutoNavi "Path Planning Process":
+Path planning process:
     1. Create map
     2. Define start and goal
     3. Run search
