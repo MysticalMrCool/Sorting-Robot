@@ -1,0 +1,1073 @@
+#VRML_SIM R2025a utf8
+
+WorldInfo {
+  info [
+    "Vision-based autonomous sorting warehouse robot."
+    "Patrols, classifies cargo with an on-board CNN, plans with A*,"
+    "picks up via Supervisor teleport, delivers to matching drop zones."
+  ]
+  title "Sorting Warehouse"
+  contactProperties [
+    ContactProperties {
+      coulombFriction [
+        1.2
+      ]
+      bounce 0
+    }
+  ]
+}
+Viewpoint {
+  orientation 0.07670116466014831 -0.24454897321285488 -0.9665985366429618 5.6149463483738336
+  position -0.8901949239171738 -0.5726035908136892 0.3310743354607897
+  follow "sorting_robot"
+  followType "None"
+}
+Background {
+  skyColor [
+    0.78 0.84 0.92
+  ]
+}
+DirectionalLight {
+  direction -0.3 -0.5 -1
+  intensity 1.8
+  castShadows TRUE
+}
+DirectionalLight {
+  direction 0.6 0.4 -0.8
+  intensity 0.7
+}
+DirectionalLight {
+  direction 0 0.3 -1
+  intensity 0.4
+}
+DEF ARENA_FLOOR Solid {
+  translation 0 0 -0.01
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.48 0.47 0.44
+        roughness 1
+        metalness 0
+      }
+      geometry DEF FLOOR_BOX Box {
+        size 4 3 0.02
+      }
+    }
+  ]
+  name "arena_floor"
+  boundingObject USE FLOOR_BOX
+}
+DEF WALL_N Solid {
+  translation 0 1.51 0.075
+  children [
+    Shape {
+      appearance DEF WALL_APPEAR PBRAppearance {
+        baseColor 0.6 0.62 0.65
+        roughness 0.85
+        metalness 0
+      }
+      geometry DEF WALL_NS_BOX Box {
+        size 4.04 0.02 0.15
+      }
+    }
+  ]
+  name "wall_north"
+  boundingObject USE WALL_NS_BOX
+}
+DEF WALL_S Solid {
+  translation 0 -1.51 0.075
+  children [
+    Shape {
+      appearance USE WALL_APPEAR
+      geometry USE WALL_NS_BOX
+    }
+  ]
+  name "wall_south"
+  boundingObject USE WALL_NS_BOX
+}
+DEF WALL_E Solid {
+  translation 2.01 0 0.075
+  children [
+    Shape {
+      appearance USE WALL_APPEAR
+      geometry DEF WALL_EW_BOX Box {
+        size 0.02 3 0.15
+      }
+    }
+  ]
+  name "wall_east"
+  boundingObject USE WALL_EW_BOX
+}
+DEF WALL_W Solid {
+  translation -2.01 0 0.075
+  children [
+    Shape {
+      appearance USE WALL_APPEAR
+      geometry USE WALL_EW_BOX
+    }
+  ]
+  name "wall_west"
+  boundingObject USE WALL_EW_BOX
+}
+DEF DROP_FRAGILE Solid {
+  translation -1.6 1.1 0.002
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.15 0.45 0.9
+        roughness 0.9
+        metalness 0
+      }
+      geometry Box {
+        size 0.5 0.5 0.004
+      }
+    }
+  ]
+  name "drop_fragile"
+}
+DEF DROP_STANDARD Solid {
+  translation 1.6 1.1 0.002
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.55 0.55 0.55
+        roughness 0.9
+        metalness 0
+      }
+      geometry Box {
+        size 0.5 0.5 0.004
+      }
+    }
+  ]
+  name "drop_standard"
+}
+DEF DROP_HAZARDOUS Solid {
+  translation -1.6 -1.1 0.002
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.85 0.15 0.15
+        roughness 0.9
+        metalness 0
+      }
+      geometry Box {
+        size 0.5 0.5 0.004
+      }
+    }
+  ]
+  name "drop_hazardous"
+}
+DEF DROP_UNKNOWN Solid {
+  translation 1.6 -1.1 0.002
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.9 0.85 0.1
+        roughness 0.9
+        metalness 0
+      }
+      geometry Box {
+        size 0.5 0.5 0.004
+      }
+    }
+  ]
+  name "drop_unknown"
+}
+DEF LABEL_FRAGILE Solid {
+  translation -1.6 1.1 0.1
+  children [
+    Pose {
+      children [
+        Shape {
+          appearance DEF POST_METAL PBRAppearance {
+            baseColor 0.4 0.4 0.45
+            roughness 0.6
+            metalness 0.5
+          }
+          geometry Cylinder {
+            height 0.2
+            radius 0.008
+          }
+        }
+      ]
+    }
+    Pose {
+      translation 0 0 0.11
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.15 0.45 0.9
+            roughness 0.5
+            metalness 0
+            emissiveColor 0.02 0.06 0.12
+          }
+          geometry Box {
+            size 0.12 0.04 0.025
+          }
+        }
+      ]
+    }
+  ]
+  name "label_fragile"
+}
+DEF LABEL_STANDARD Solid {
+  translation 1.6 1.1 0.1
+  children [
+    Pose {
+      children [
+        Shape {
+          appearance USE POST_METAL
+          geometry Cylinder {
+            height 0.2
+            radius 0.008
+          }
+        }
+      ]
+    }
+    Pose {
+      translation 0 0 0.11
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.55 0.55 0.55
+            roughness 0.5
+            metalness 0
+            emissiveColor 0.07 0.07 0.07
+          }
+          geometry Box {
+            size 0.12 0.04 0.025
+          }
+        }
+      ]
+    }
+  ]
+  name "label_standard"
+}
+DEF LABEL_HAZARDOUS Solid {
+  translation -1.6 -1.1 0.1
+  children [
+    Pose {
+      children [
+        Shape {
+          appearance USE POST_METAL
+          geometry Cylinder {
+            height 0.2
+            radius 0.008
+          }
+        }
+      ]
+    }
+    Pose {
+      translation 0 0 0.11
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.85 0.15 0.15
+            roughness 0.5
+            metalness 0
+            emissiveColor 0.12 0.02 0.02
+          }
+          geometry Box {
+            size 0.12 0.04 0.025
+          }
+        }
+      ]
+    }
+  ]
+  name "label_hazardous"
+}
+DEF LABEL_UNKNOWN Solid {
+  translation 1.6 -1.1 0.1
+  children [
+    Pose {
+      children [
+        Shape {
+          appearance USE POST_METAL
+          geometry Cylinder {
+            height 0.2
+            radius 0.008
+          }
+        }
+      ]
+    }
+    Pose {
+      translation 0 0 0.11
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.9 0.85 0.1
+            roughness 0.5
+            metalness 0
+            emissiveColor 0.12 0.11 0.01
+          }
+          geometry Box {
+            size 0.12 0.04 0.025
+          }
+        }
+      ]
+    }
+  ]
+  name "label_unknown"
+}
+DEF OBSTACLE_1 Solid {
+  translation 0 0.6 0.15
+  children [
+    Shape {
+      appearance DEF SHELF_METAL PBRAppearance {
+        baseColor 0.35 0.36 0.38
+        roughness 0.5
+        metalness 0.65
+      }
+      geometry DEF OB_BOX_1 Box {
+        size 0.8 0.1 0.3
+      }
+    }
+    Pose {
+      translation 0 0 0.16
+      children [
+        Shape {
+          appearance DEF SHELF_WOOD PBRAppearance {
+            baseColor 0.5 0.35 0.18
+            roughness 0.85
+            metalness 0
+          }
+          geometry Box {
+            size 0.82 0.12 0.012
+          }
+        }
+      ]
+    }
+    Pose {
+      children [
+        Shape {
+          appearance USE SHELF_WOOD
+          geometry Box {
+            size 0.82 0.12 0.012
+          }
+        }
+      ]
+    }
+  ]
+  name "obstacle_1"
+  boundingObject USE OB_BOX_1
+}
+DEF OBSTACLE_2 Solid {
+  translation 0 -0.6 0.15
+  children [
+    Shape {
+      appearance USE SHELF_METAL
+      geometry DEF OB_BOX_2 Box {
+        size 0.8 0.1 0.3
+      }
+    }
+    Pose {
+      translation 0 0 0.16
+      children [
+        Shape {
+          appearance USE SHELF_WOOD
+          geometry Box {
+            size 0.82 0.12 0.012
+          }
+        }
+      ]
+    }
+    Pose {
+      children [
+        Shape {
+          appearance USE SHELF_WOOD
+          geometry Box {
+            size 0.82 0.12 0.012
+          }
+        }
+      ]
+    }
+  ]
+  name "obstacle_2"
+  boundingObject USE OB_BOX_2
+}
+DEF SHELF_NE Solid {
+  translation 1.85 0.5 0.22
+  children [
+    Shape {
+      appearance USE SHELF_METAL
+      geometry Box {
+        size 0.02 0.6 0.02
+      }
+    }
+    Pose {
+      translation -0.06 0 0.01
+      children [
+        Shape {
+          appearance USE SHELF_WOOD
+          geometry Box {
+            size 0.1 0.6 0.012
+          }
+        }
+      ]
+    }
+  ]
+  name "shelf_northeast"
+}
+DEF SHELF_NW Solid {
+  translation -1.85 0.5 0.22
+  children [
+    Shape {
+      appearance USE SHELF_METAL
+      geometry Box {
+        size 0.02 0.6 0.02
+      }
+    }
+    Pose {
+      translation 0.06 0 0.01
+      children [
+        Shape {
+          appearance USE SHELF_WOOD
+          geometry Box {
+            size 0.1 0.6 0.012
+          }
+        }
+      ]
+    }
+  ]
+  name "shelf_northwest"
+}
+DEF SHELF_SE Solid {
+  translation 1.85 -0.5 0.22
+  children [
+    Shape {
+      appearance USE SHELF_METAL
+      geometry Box {
+        size 0.02 0.6 0.02
+      }
+    }
+    Pose {
+      translation -0.06 0 0.01
+      children [
+        Shape {
+          appearance USE SHELF_WOOD
+          geometry Box {
+            size 0.1 0.6 0.012
+          }
+        }
+      ]
+    }
+  ]
+  name "shelf_southeast"
+}
+DEF SHELF_SW Solid {
+  translation -1.85 -0.5 0.22
+  children [
+    Shape {
+      appearance USE SHELF_METAL
+      geometry Box {
+        size 0.02 0.6 0.02
+      }
+    }
+    Pose {
+      translation 0.06 0 0.01
+      children [
+        Shape {
+          appearance USE SHELF_WOOD
+          geometry Box {
+            size 0.1 0.6 0.012
+          }
+        }
+      ]
+    }
+  ]
+  name "shelf_southwest"
+}
+DEF SAFETY_LINE_NS Solid {
+  translation 0 0 0.001
+  children [
+    Shape {
+      appearance DEF TAPE_YELLOW PBRAppearance {
+        baseColor 0.92 0.82 0.08
+        roughness 0.85
+        metalness 0
+      }
+      geometry Box {
+        size 3.6 0.03 0.002
+      }
+    }
+  ]
+  name "safety_line_ns"
+}
+DEF SAFETY_LINE_EW Solid {
+  translation 0 0 0.001
+  children [
+    Shape {
+      appearance USE TAPE_YELLOW
+      geometry Box {
+        size 0.03 2.6 0.002
+      }
+    }
+  ]
+  name "safety_line_ew"
+}
+DEF CARGO_JAMJAR_A Solid {
+  translation -0.6 0.35 0.045
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.45 0.28 0.08
+        transparency 0.2
+        roughness 0.12
+        metalness 0.05
+      }
+      geometry Cylinder {
+        height 0.075
+        radius 0.034
+      }
+    }
+    Pose {
+      translation 0 0 0.04
+      children [
+        Shape {
+          appearance DEF JAR_LID PBRAppearance {
+            baseColor 0.8 0.65 0.25
+            roughness 0.3
+            metalness 0.7
+          }
+          geometry Cylinder {
+            height 0.015
+            radius 0.036
+          }
+        }
+      ]
+    }
+  ]
+  name "jam_jar_a"
+  boundingObject DEF JAMJAR_GEOM Cylinder {
+    height 0.09
+    radius 0.035
+  }
+  physics Physics {
+    density -1
+    mass 0.1
+  }
+  recognitionColors [
+    0.45 0.28 0.08
+  ]
+}
+DEF CARGO_JAMJAR_B Solid {
+  translation 0.8 0.35 0.045
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.45 0.28 0.08
+        transparency 0.2
+        roughness 0.12
+        metalness 0.05
+      }
+      geometry Cylinder {
+        height 0.075
+        radius 0.034
+      }
+    }
+    Pose {
+      translation 0 0 0.04
+      children [
+        Shape {
+          appearance USE JAR_LID
+          geometry Cylinder {
+            height 0.015
+            radius 0.036
+          }
+        }
+      ]
+    }
+  ]
+  name "jam_jar_b"
+  boundingObject USE JAMJAR_GEOM
+  physics Physics {
+    density -1
+    mass 0.1
+  }
+  recognitionColors [
+    0.45 0.28 0.08
+  ]
+}
+DEF CARGO_BISCUIT Solid {
+  translation 0.8 -0.35 0.03
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.42 0.35 0.2
+        roughness 0.92
+        metalness 0
+      }
+      geometry DEF BISCUIT_GEOM Box {
+        size 0.12 0.18 0.06
+      }
+    }
+    Pose {
+      translation 0 0 0.031
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.6 0.15 0.1
+            roughness 0.85
+            metalness 0
+          }
+          geometry Box {
+            size 0.08 0.12 0.001
+          }
+        }
+      ]
+    }
+  ]
+  name "biscuit_box"
+  boundingObject USE BISCUIT_GEOM
+  physics Physics {
+    density -1
+    mass 0.15
+  }
+  recognitionColors [
+    0.42 0.35 0.2
+  ]
+}
+DEF CARGO_APPLE Solid {
+  translation -0.6 -0.35 0.045
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.35 0.82 0.15
+        roughness 0.3
+        metalness 0
+      }
+      geometry DEF APPLE_GEOM Sphere {
+        radius 0.045
+      }
+    }
+    Pose {
+      translation 0 0 0.042
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.3 0.18 0.08
+            roughness 0.8
+            metalness 0
+          }
+          geometry Cylinder {
+            height 0.015
+            radius 0.003
+          }
+        }
+      ]
+    }
+    Pose {
+      translation 0.008 0 0.048
+      rotation 1 0 0 0.3
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.15 0.55 0.1
+            roughness 0.6
+            metalness 0
+          }
+          geometry Box {
+            size 0.018 0.006 0.001
+          }
+        }
+      ]
+    }
+  ]
+  name "apple"
+  boundingObject USE APPLE_GEOM
+  physics Physics {
+    density -1
+    mass 0.12
+  }
+  recognitionColors [
+    0.35 0.82 0.15
+  ]
+}
+DEF CARGO_CAN Solid {
+  translation 0.15 0 0.055
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.25 0.6 0.3
+        roughness 0.35
+        metalness 0.4
+      }
+      geometry DEF CAN_GEOM Cylinder {
+        height 0.11
+        radius 0.033
+      }
+    }
+    Pose {
+      translation 0 0 0.05
+      children [
+        Shape {
+          appearance DEF CAN_RIM PBRAppearance {
+            baseColor 0.72 0.72 0.74
+            roughness 0.2
+            metalness 0.8
+          }
+          geometry Cylinder {
+            height 0.012
+            radius 0.034
+          }
+        }
+      ]
+    }
+    Pose {
+      translation 0 0 -0.05
+      children [
+        Shape {
+          appearance USE CAN_RIM
+          geometry Cylinder {
+            height 0.012
+            radius 0.034
+          }
+        }
+      ]
+    }
+  ]
+  name "can"
+  boundingObject USE CAN_GEOM
+  physics Physics {
+    density -1
+    mass 0.2
+  }
+  recognitionColors [
+    0.25 0.6 0.3
+  ]
+}
+DEF CARGO_OILBARREL_A Solid {
+  translation -1.5 0 0.07
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.7 0.2 0.1
+        roughness 0.55
+        metalness 0.3
+      }
+      geometry DEF OILBARREL_GEOM Cylinder {
+        height 0.14
+        radius 0.055
+      }
+    }
+    Pose {
+      translation 0 0 0.065
+      children [
+        Shape {
+          appearance DEF BARREL_RIM PBRAppearance {
+            baseColor 0.3 0.3 0.3
+            roughness 0.5
+            metalness 0.6
+          }
+          geometry Cylinder {
+            height 0.012
+            radius 0.057
+          }
+        }
+      ]
+    }
+    Pose {
+      translation 0 0 -0.065
+      children [
+        Shape {
+          appearance USE BARREL_RIM
+          geometry Cylinder {
+            height 0.012
+            radius 0.057
+          }
+        }
+      ]
+    }
+    Pose {
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.12 0.12 0.1
+            roughness 0.9
+            metalness 0.1
+          }
+          geometry Cylinder {
+            height 0.025
+            radius 0.056
+          }
+        }
+      ]
+    }
+  ]
+  name "oil_barrel_a"
+  boundingObject USE OILBARREL_GEOM
+  physics Physics {
+    density -1
+    mass 0.35
+  }
+  recognitionColors [
+    0.7 0.2 0.1
+  ]
+}
+DEF CARGO_OILBARREL_B Solid {
+  translation 1.5 0 0.07
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.7 0.2 0.1
+        roughness 0.55
+        metalness 0.3
+      }
+      geometry USE OILBARREL_GEOM
+    }
+    Pose {
+      translation 0 0 0.065
+      children [
+        Shape {
+          appearance USE BARREL_RIM
+          geometry Cylinder {
+            height 0.012
+            radius 0.057
+          }
+        }
+      ]
+    }
+    Pose {
+      translation 0 0 -0.065
+      children [
+        Shape {
+          appearance USE BARREL_RIM
+          geometry Cylinder {
+            height 0.012
+            radius 0.057
+          }
+        }
+      ]
+    }
+    Pose {
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.12 0.12 0.1
+            roughness 0.9
+            metalness 0.1
+          }
+          geometry Cylinder {
+            height 0.025
+            radius 0.056
+          }
+        }
+      ]
+    }
+  ]
+  name "oil_barrel_b"
+  boundingObject USE OILBARREL_GEOM
+  physics Physics {
+    density -1
+    mass 0.35
+  }
+  recognitionColors [
+    0.7 0.2 0.1
+  ]
+}
+DEF SORTING_ROBOT Robot {
+  translation 0 0 0.05
+  rotation 0 0 1 1.5708
+  children [
+    Solid {
+      translation 0 0 0.05
+      rotation 0 0 1 1.5708
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.15 0.55 0.85
+            roughness 0.6
+            metalness 0.2
+          }
+          geometry Cylinder {
+            height 0.1
+            radius 0.08
+          }
+        }
+      ]
+      name "body_visual"
+    }
+    DEF CARRY_INDICATOR Pose {
+      translation 0 0 0.12
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.1 0.9 0.1
+            transparency 0.6
+            roughness 0.5
+            metalness 0
+          }
+          geometry Box {
+            size 0.05 0.05 0.02
+          }
+        }
+      ]
+    }
+    HingeJoint {
+      jointParameters HingeJointParameters {
+        axis 0 1 0
+        anchor 0 0.09 0.025
+      }
+      device [
+        RotationalMotor {
+          name "left wheel motor"
+          consumptionFactor 70
+        }
+        PositionSensor {
+          name "left wheel sensor"
+        }
+      ]
+      endPoint Solid {
+        translation 0 0.09 0.025
+        rotation 1 0 0 1.5708
+        children [
+          DEF WHEEL Shape {
+            appearance PBRAppearance {
+              baseColor 0.1 0.1 0.1
+              roughness 1
+              metalness 0
+            }
+            geometry DEF WHEEL_GEOM Cylinder {
+              height 0.02
+              radius 0.03
+            }
+          }
+        ]
+        name "left_wheel"
+        boundingObject USE WHEEL_GEOM
+        physics DEF WHEEL_PHYS Physics {
+          density -1
+          mass 0.05
+        }
+      }
+    }
+    HingeJoint {
+      jointParameters HingeJointParameters {
+        axis 0 1 0
+        anchor 0 -0.09 0.025
+      }
+      device [
+        RotationalMotor {
+          name "right wheel motor"
+          consumptionFactor 70
+        }
+        PositionSensor {
+          name "right wheel sensor"
+        }
+      ]
+      endPoint Solid {
+        translation 0 -0.09 0.025
+        rotation 1 0 0 1.5708
+        children [
+          USE WHEEL
+        ]
+        name "right_wheel"
+        boundingObject USE WHEEL_GEOM
+        physics USE WHEEL_PHYS
+      }
+    }
+    DEF CASTER Solid {
+      translation -0.06 0 0.015
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.2 0.2 0.2
+            roughness 1
+            metalness 0
+          }
+          geometry DEF CASTER_GEOM Sphere {
+            radius 0.015
+          }
+        }
+      ]
+      name "caster"
+      boundingObject USE CASTER_GEOM
+      physics Physics {
+        density -1
+        mass 0.02
+      }
+    }
+    DistanceSensor {
+      translation 0.08 0.04 0.08
+      rotation 0 0 1 0.35
+      children [
+        DEF DS_SHAPE Shape {
+          appearance PBRAppearance {
+            baseColor 0.95 0.95 0.1
+            roughness 1
+            metalness 0
+          }
+          geometry Cylinder {
+            height 0.01
+            radius 0.008
+          }
+        }
+      ]
+      name "ds_left"
+      lookupTable [
+        0 1000 0
+        0.05 1000 0.01
+        0.5 0 0.02
+      ]
+      numberOfRays 2
+      aperture 0.3
+    }
+    DistanceSensor {
+      translation 0.08 -0.04 0.08
+      rotation 0 0 1 -0.35
+      children [
+        USE DS_SHAPE
+      ]
+      name "ds_right"
+      lookupTable [
+        0 1000 0
+        0.05 1000 0.01
+        0.5 0 0.02
+      ]
+      numberOfRays 2
+      aperture 0.3
+    }
+    Camera {
+      translation 0.08 0 0.11
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.1 0.1 0.1
+            roughness 0.5
+            metalness 0.1
+          }
+          geometry Box {
+            size 0.02 0.04 0.02
+          }
+        }
+      ]
+      fieldOfView 1.047
+      width 128
+      height 128
+      antiAliasing TRUE
+      recognition Recognition {
+        frameColor 1 1 0
+        frameThickness 2
+      }
+    }
+    GPS {
+    }
+    Compass {
+    }
+  ]
+  name "sorting_robot"
+  boundingObject Pose {
+    translation 0 0 0.05
+    children [
+      Box {
+        size 0.16 0.16 0.1
+      }
+    ]
+  }
+  physics Physics {
+    density -1
+    mass 1.2
+  }
+  controller "sorting_robot"
+  supervisor TRUE
+}

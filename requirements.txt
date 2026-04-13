@@ -1,0 +1,11 @@
+# Python dependencies for the sorting_robot controller and trainer.
+# Install with:  pip install -r requirements.txt
+#
+# Core (required by the Webots controller):
+numpy>=1.24
+
+# CNN training and inference (optional - inference.py has a colour-histogram
+# fallback if these aren't installed, so the controller will still run):
+torch>=2.0
+torchvision>=0.15
+Pillow>=10.0
