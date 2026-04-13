@@ -144,10 +144,15 @@ class Classifier:
     # ---------- Public API ----------------------------------------------------
 
     def classify(self, image: Any) -> str:
+        cat, _ = self.classify_with_confidence(image)
+        return cat
+
+    def classify_with_confidence(self, image: Any) -> tuple:
+        """Return (category_str, confidence_float)."""
         if image is None:
-            return "unknown"
+            return ("unknown", 0.0)
         if not _NUMPY_AVAILABLE:
-            return "unknown"
+            return ("unknown", 0.0)
         if self.mode == "cnn" and self.model is not None:
             return self._classify_cnn(image)
         if self.mode == "numpy_cnn" and self._np_weights is not None:
@@ -156,7 +161,7 @@ class Classifier:
 
     # ---------- PyTorch CNN path ----------------------------------------------
 
-    def _classify_cnn(self, image: Any) -> str:
+    def _classify_cnn(self, image: Any) -> tuple:
         tensor = self._to_tensor(image)
         with torch.no_grad():
             logits = self.model(tensor)
@@ -165,8 +170,8 @@ class Classifier:
         conf_f = float(confidence)
         pred = CATEGORIES[int(idx)]
         if conf_f < 0.5:
-            return "unknown"
-        return pred
+            return ("unknown", conf_f)
+        return (pred, conf_f)
 
     def _to_tensor(self, image: Any) -> "torch.Tensor":
         img = image.astype(np.float32)
@@ -195,12 +200,12 @@ class Classifier:
         prob_str = ", ".join(f"{CATEGORIES[i]}={probs[i]:.3f}" for i in range(len(CATEGORIES)))
         print(f"[inference] numpy_cnn: [{prob_str}] -> {CATEGORIES[idx]} ({conf:.3f})", flush=True)
         if conf < 0.5:
-            return "unknown"
-        return CATEGORIES[idx]
+            return ("unknown", conf)
+        return (CATEGORIES[idx], conf)
 
     # ---------- Colour-histogram fallback ------------------------------------
 
-    def _classify_colour_histogram(self, image: Any) -> str:
+    def _classify_colour_histogram(self, image: Any) -> tuple:
         h, w = image.shape[:2]
         y0, y1 = h // 4, 3 * h // 4
         x0, x1 = w // 4, 3 * w // 4
@@ -215,15 +220,15 @@ class Classifier:
         brightness = (r + g + b) / 3.0
 
         if brightness > 0.7 and abs(r - g) < 0.08 and abs(g - b) < 0.08:
-            return "unknown"
+            return ("unknown", 0.5)
         if r > 0.45 and r > g + 0.1 and r > b + 0.1:
-            return "hazardous"
+            return ("hazardous", 0.5)
         if brightness > 0.35 and (g > 0.3 or r > 0.4):
-            return "standard"
+            return ("standard", 0.5)
         if brightness < 0.45:
-            return "fragile"
+            return ("fragile", 0.5)
 
-        return "unknown"
+        return ("unknown", 0.5)
 
 
 def _resize_nearest(img: Any, new_h: int, new_w: int) -> Any:

@@ -51,13 +51,18 @@ import math
 # -----------------------------------------------------------------------------
 
 OBSTACLE_STOP_DISTANCE = 0.18     # metres - any closer triggers AVOID
-APPROACH_DISTANCE = 0.22          # stop approaching once this close to target
+APPROACH_DISTANCE = 0.20          # stop approaching once this close to target
+# Strategic distance checkpoints for frame capture during approach.
+# One frame per checkpoint (~4 approach + 1 dwell = ~5 total) instead of
+# one per tick (~91).  Mid-range shots ensure large items (barrels) are
+# captured before they fill the entire frame at close range.
+CLASSIFY_FRAME_DISTANCES = [0.40, 0.35, 0.30, 0.25]
 PICKUP_RADIUS = 0.25              # supervisor teleport kicks in inside this
 DELIVERY_RADIUS = 0.30            # close enough to the drop pad to release
 WAYPOINT_RADIUS = 0.25            # patrol waypoint reached tolerance
 CRUISE_SPEED = 4.0                # rad/s on wheels
 TURN_SPEED = 2.5
-CLASSIFY_DURATION_MS = 800        # dwell time in CLASSIFY state
+CLASSIFY_DURATION_MS = 400        # dwell after stopping (camera settle time)
 PICKUP_DURATION_MS = 600
 FAIL_SAFE_DURATION_MS = 1500
 
@@ -141,7 +146,9 @@ class PriorityFSM:
         self.active_path = []                # list of (x, y) waypoints
         self.active_path_index = 0
         self._avoid_count = 0                # consecutive avoid cycles
-        self._classify_frames = []           # frames collected during CLASSIFY dwell
+        self._classify_frames = []           # frames collected for classification
+        self._next_frame_idx = 0             # index into CLASSIFY_FRAME_DISTANCES
+        self._classify_dwell_captured = False # single dwell frame flag
         self._zone_drop_count = {}           # items delivered per zone (for offset)
 
         self.robot.log("[FSM] initialised in PATROL")
@@ -170,8 +177,11 @@ class PriorityFSM:
         priority interrupts (Wk04), not a hierarchical Behaviour Tree (Wk08).
         """
         # --- Priority selector ------------------------------------------------
+        # 0. COMPLETE is terminal - nothing can interrupt it
+        if self.current_state == State.COMPLETE:
+            pass
         # 1. Fail-safe is sticky for its own duration
-        if self.current_state == State.FAIL_SAFE and self.time_in_state_ms() < FAIL_SAFE_DURATION_MS:
+        elif self.current_state == State.FAIL_SAFE and self.time_in_state_ms() < FAIL_SAFE_DURATION_MS:
             pass
         # 2. Safety override - obstacle too close (but not during final delivery
         #    approach, where delivered items in the drop zone would cause loops)
@@ -188,6 +198,8 @@ class PriorityFSM:
             target = self.robot.next_visible_cargo()
             if target is not None:
                 self.active_cargo_def = target["def"]
+                self._classify_frames = []  # fresh start for this item
+                self._next_frame_idx = 0
                 self.enter_state(State.APPROACH_TARGET)
 
         # --- State action --------------------------------------------------
@@ -229,6 +241,9 @@ class PriorityFSM:
         Walk the precomputed patrol waypoint loop. This is the default
         background behaviour when nothing else is active.
         """
+        if self.robot.cargo_remaining() == 0:
+            self.enter_state(State.COMPLETE)
+            return
         tx, ty = self.robot.patrol_target_xy()
         self._drive_toward(tx, ty)
         x, y = self.robot.gps_xy()
@@ -249,8 +264,16 @@ class PriorityFSM:
         self.active_cargo_def = target["def"]
         tx, ty = target["xy"]
         self._drive_toward(tx, ty)
+        # Capture one frame per distance checkpoint (not every tick)
+        if (self._next_frame_idx < len(CLASSIFY_FRAME_DISTANCES) and
+                target["distance"] < CLASSIFY_FRAME_DISTANCES[self._next_frame_idx]):
+            image = self.robot.grab_image()
+            if image is not None:
+                self._classify_frames.append(image)
+            self._next_frame_idx += 1
         if target["distance"] < APPROACH_DISTANCE:
             self.robot.stop()
+            self._classify_dwell_captured = False
             self.enter_state(State.CLASSIFY)
 
     def _do_classify(self) -> None:
@@ -261,21 +284,24 @@ class PriorityFSM:
         Perception gives facts. Decision gives intention."
         """
         self.robot.stop()
-        # Collect frames throughout the dwell period
-        image = self.robot.grab_image()
-        if image is not None:
-            self._classify_frames.append(image)
+        # Capture a single frame once the camera has settled after stopping
+        if not self._classify_dwell_captured:
+            image = self.robot.grab_image()
+            if image is not None:
+                self._classify_frames.append(image)
+            self._classify_dwell_captured = True
         if self.time_in_state_ms() < CLASSIFY_DURATION_MS:
             return  # dwell so the camera frame is stable
 
-        frames = self._classify_frames[-5:]  # use last 5 frames
+        frames = self._classify_frames
         self._classify_frames = []
+        self._next_frame_idx = 0
         if not frames:
             self.robot.log("[FSM] classify failed - no frames")
             self.enter_state(State.FAIL_SAFE)
             return
 
-        # Debug: save the classify frame so we can inspect what the CNN sees
+        # Debug: save frames so we can inspect what the CNN sees
         try:
             import os, numpy as np
             from PIL import Image as PILImage
@@ -289,18 +315,19 @@ class PriorityFSM:
         except Exception as e:
             self.robot.log(f"[FSM] debug frame save failed: {e}")
 
-        # Majority vote across frames
-        votes = {}
+        # Confidence-weighted vote across the ~5 strategically-captured frames
+        score = {}  # cat -> total confidence
         for frame in frames:
-            cat = self.classifier.classify(frame)
-            votes[cat] = votes.get(cat, 0) + 1
+            cat, conf = self.classifier.classify_with_confidence(frame)
+            score[cat] = score.get(cat, 0.0) + conf
 
         # Prefer the best non-unknown category if any frame produced one
-        non_unknown = {k: v for k, v in votes.items() if k != "unknown"}
+        non_unknown = {k: v for k, v in score.items() if k != "unknown"}
         if non_unknown:
             category = max(non_unknown, key=non_unknown.get)
         else:
             category = "unknown"
+        votes = {k: round(v, 2) for k, v in score.items()}
 
         self.robot.log(f"[FSM] classify votes: {votes}")
         self.active_category = category

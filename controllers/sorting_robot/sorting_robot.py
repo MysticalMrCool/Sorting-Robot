@@ -102,12 +102,14 @@ DROP_ZONES = {
     "drop_unknown":   (1.6, -1.1),
 }
 
-# Patrol waypoints - a simple rectangular loop around the cargo area
+# Patrol waypoints - figure-8 that sweeps the perimeter AND the centre
 PATROL_WAYPOINTS = [
     (-1.2, -0.9),
-    (1.2, -0.9),
-    (1.2, 0.9),
-    (-1.2, 0.9),
+    ( 0.0,  0.0),   # cut through the middle
+    ( 1.2, -0.9),
+    ( 1.2,  0.9),
+    ( 0.0,  0.0),   # cut through again from the other side
+    (-1.2,  0.9),
 ]
 
 # Distance at which the robot considers a Recognition object "visible"
