@@ -59,8 +59,8 @@ CLASSIFY_FRAME_DISTANCES = [0.40, 0.35, 0.30, 0.25]
 PICKUP_RADIUS = 0.25              # supervisor teleport kicks in inside this
 DELIVERY_RADIUS = 0.30            # close enough to the drop pad to release
 WAYPOINT_RADIUS = 0.25            # patrol waypoint reached tolerance
-CRUISE_SPEED = 4.0                # rad/s on wheels
-TURN_SPEED = 2.5
+CRUISE_SPEED = 8.0                # rad/s on wheels (Doubled from 4.0 for speed!)
+TURN_SPEED = 5.0                  # (Doubled from 2.5)
 CLASSIFY_DURATION_MS = 400        # dwell after stopping (camera settle time)
 PICKUP_DURATION_MS = 600
 FAIL_SAFE_DURATION_MS = 1500
@@ -235,17 +235,42 @@ class PriorityFSM:
 
     def _do_patrol(self) -> None:
         """
-        Walk the precomputed patrol waypoint loop. This is the default
-        background behaviour when nothing else is active.
+        Walk the precomputed patrol waypoint loop using A* pathfinding.
+        This guarantees safe returns from drop zones through the warehouse.
         """
         if self.robot.cargo_remaining() == 0:
             self.enter_state(State.COMPLETE)
             return
+            
         tx, ty = self.robot.patrol_target_xy()
-        self._drive_toward(tx, ty)
         x, y = self.robot.gps_xy()
+        
+        # Reached waypoint? Advance and clear path to trigger replanning
         if math.hypot(tx - x, ty - y) < WAYPOINT_RADIUS:
             self.robot.advance_patrol()
+            self.active_path = []
+            return
+            
+        # Need a path? Generate one using A*
+        if not self.active_path:
+            self.active_path = self.planner.plan((x, y), (tx, ty))
+            self.active_path_index = 0
+            
+            # If A* fails (e.g. waypoint inside wall), skip to the next waypoint
+            if not self.active_path:
+                self.robot.log(f"[FSM] Cannot find path to waypoint ({tx}, {ty}). Skipping.")
+                self.robot.advance_patrol()
+                return
+
+        # Follow the A* path
+        while self.active_path_index < len(self.active_path) - 1:
+            wx, wy = self.active_path[self.active_path_index]
+            if math.hypot(wx - x, wy - y) < WAYPOINT_RADIUS:
+                self.active_path_index += 1
+            else:
+                break
+        wx, wy = self.active_path[self.active_path_index]
+        self._drive_toward(wx, wy)
 
     def _do_approach_target(self) -> None:
         """
@@ -256,6 +281,7 @@ class PriorityFSM:
         if target is None:
             # Lost sight of it - back to patrol
             self.active_cargo_def = None
+            self.active_path = []  # Clear path so it recalculates
             self.enter_state(State.PATROL)
             return
         self.active_cargo_def = target["def"]
@@ -451,6 +477,7 @@ class PriorityFSM:
             if self.robot.holding_item():
                 self.enter_state(State.PLAN_DELIVERY)
             else:
+                self.active_path = [] # Clear path so it recalculates
                 self.enter_state(State.PATROL)
 
     def _do_fail_safe(self) -> None:

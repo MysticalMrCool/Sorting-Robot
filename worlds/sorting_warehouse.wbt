@@ -1,5 +1,7 @@
 #VRML_SIM R2025a utf8
 
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/CorrugatedMetal.proto"
+
 WorldInfo {
   info [
     "Vision-based autonomous sorting warehouse robot."
@@ -17,8 +19,8 @@ WorldInfo {
   ]
 }
 Viewpoint {
-  orientation -0.00422057317828765 -0.9998182291582051 -0.018592885870620825 5.864835738107539
-  position -4.549311525299577 -0.007799172492172678 1.9470794794266795
+  orientation 0.41863442228693437 -0.001645730057099584 -0.9081533527158636 3.1530796383594164
+  position 8.33972663707128 0.025258768624718417 8.990138741475736
   follow "sorting_robot"
   followType "None"
 }
@@ -50,7 +52,7 @@ DEF ARENA_FLOOR Solid {
         metalness 0
       }
       geometry DEF FLOOR_BOX Box {
-        size 4 3 0.02
+        size 7 6 0.02
       }
     }
   ]
@@ -58,7 +60,7 @@ DEF ARENA_FLOOR Solid {
   boundingObject USE FLOOR_BOX
 }
 DEF WALL_N Solid {
-  translation 0 1.51 0.075
+  translation 0 3.01 0.075
   children [
     Shape {
       appearance DEF WALL_APPEAR PBRAppearance {
@@ -67,7 +69,7 @@ DEF WALL_N Solid {
         metalness 0
       }
       geometry DEF WALL_NS_BOX Box {
-        size 4.04 0.02 0.15
+        size 7 0.02 0.15
       }
     }
   ]
@@ -75,7 +77,7 @@ DEF WALL_N Solid {
   boundingObject USE WALL_NS_BOX
 }
 DEF WALL_S Solid {
-  translation 0 -1.51 0.075
+  translation 0 -3 0.075
   children [
     Shape {
       appearance USE WALL_APPEAR
@@ -86,12 +88,12 @@ DEF WALL_S Solid {
   boundingObject USE WALL_NS_BOX
 }
 DEF WALL_E Solid {
-  translation 2.01 0 0.075
+  translation 3.51 0 0.075
   children [
     Shape {
       appearance USE WALL_APPEAR
       geometry DEF WALL_EW_BOX Box {
-        size 0.02 3 0.15
+        size 0.02 6 0.15
       }
     }
   ]
@@ -99,7 +101,7 @@ DEF WALL_E Solid {
   boundingObject USE WALL_EW_BOX
 }
 DEF WALL_W Solid {
-  translation -2.01 0 0.075
+  translation -3.51 0 0.075
   children [
     Shape {
       appearance USE WALL_APPEAR
@@ -110,7 +112,7 @@ DEF WALL_W Solid {
   boundingObject USE WALL_EW_BOX
 }
 DEF DROP_FRAGILE Solid {
-  translation -1.6 1.1 0.002
+  translation -3 1.5 0.002
   children [
     Shape {
       appearance PBRAppearance {
@@ -119,14 +121,14 @@ DEF DROP_FRAGILE Solid {
         metalness 0
       }
       geometry Box {
-        size 0.5 0.5 0.004
+        size 0.75 0.75 0.004
       }
     }
   ]
   name "drop_fragile"
 }
 DEF DROP_STANDARD Solid {
-  translation 1.6 1.1 0.002
+  translation -3 0.5 0.002
   children [
     Shape {
       appearance PBRAppearance {
@@ -135,14 +137,14 @@ DEF DROP_STANDARD Solid {
         metalness 0
       }
       geometry Box {
-        size 0.5 0.5 0.004
+        size 0.75 0.75 0.004
       }
     }
   ]
   name "drop_standard"
 }
 DEF DROP_HAZARDOUS Solid {
-  translation -1.6 -1.1 0.002
+  translation -3 -0.5 0.002
   children [
     Shape {
       appearance PBRAppearance {
@@ -151,14 +153,14 @@ DEF DROP_HAZARDOUS Solid {
         metalness 0
       }
       geometry Box {
-        size 0.5 0.5 0.004
+        size 0.75 0.75 0.004
       }
     }
   ]
   name "drop_hazardous"
 }
 DEF DROP_UNKNOWN Solid {
-  translation 1.6 -1.1 0.002
+  translation -3 -1.5 0.002
   children [
     Shape {
       appearance PBRAppearance {
@@ -167,14 +169,14 @@ DEF DROP_UNKNOWN Solid {
         metalness 0
       }
       geometry Box {
-        size 0.5 0.5 0.004
+        size 0.75 0.75 0.004
       }
     }
   ]
   name "drop_unknown"
 }
 DEF OBSTACLE_1 Solid {
-  translation 0 0.6 0.15
+  translation 0 2.35 0.15
   children [
     Shape {
       appearance DEF SHELF_METAL PBRAppearance {
@@ -183,7 +185,7 @@ DEF OBSTACLE_1 Solid {
         metalness 0.65
       }
       geometry DEF OB_BOX_1 Box {
-        size 0.8 0.1 0.3
+        size 2 0.1 0.3
       }
     }
     Pose {
@@ -196,7 +198,7 @@ DEF OBSTACLE_1 Solid {
             metalness 0
           }
           geometry Box {
-            size 0.82 0.12 0.012
+            size 2.02 0.12 0.012
           }
         }
       ]
@@ -206,7 +208,7 @@ DEF OBSTACLE_1 Solid {
         Shape {
           appearance USE SHELF_WOOD
           geometry Box {
-            size 0.82 0.12 0.012
+            size 2.02 0.12 0.012
           }
         }
       ]
@@ -216,7 +218,7 @@ DEF OBSTACLE_1 Solid {
   boundingObject USE OB_BOX_1
 }
 DEF OBSTACLE_2 Solid {
-  translation 0 -0.6 0.15
+  translation -1.18 -2.55 0.15
   children [
     Shape {
       appearance USE SHELF_METAL
@@ -249,8 +251,176 @@ DEF OBSTACLE_2 Solid {
   name "obstacle_2"
   boundingObject USE OB_BOX_2
 }
+DEF OBSTACLE_3 Solid {
+  translation 1.07 -2.55 0.15
+  children [
+    Shape {
+      appearance USE SHELF_METAL
+      geometry Box {
+        size 2 0.1 0.3
+      }
+    }
+    Pose {
+      translation 0 0 0.16
+      children [
+        Shape {
+          appearance USE SHELF_WOOD
+          geometry Box {
+            size 2.02 0.12 0.012
+          }
+        }
+      ]
+    }
+    Pose {
+      children [
+        Shape {
+          appearance USE SHELF_WOOD
+          geometry Box {
+            size 2.02 0.12 0.012
+          }
+        }
+      ]
+    }
+  ]
+  name "obstacle_2(6)"
+}
+DEF OBSTACLE_4 Solid {
+  translation -2.75722 -2.42348 0.15
+  rotation 0 0 1 -0.3325953071795862
+  children [
+    Shape {
+      appearance USE SHELF_METAL
+      geometry DEF OB_BOX_2 Box {
+        size 0.8 0.1 0.3
+      }
+    }
+    Pose {
+      translation 0 0 0.16
+      children [
+        Shape {
+          appearance USE SHELF_WOOD
+          geometry Box {
+            size 0.82 0.12 0.012
+          }
+        }
+      ]
+    }
+    Pose {
+      children [
+        Shape {
+          appearance USE SHELF_WOOD
+          geometry Box {
+            size 0.82 0.12 0.012
+          }
+        }
+      ]
+    }
+  ]
+  name "obstacle_2(1)"
+  boundingObject USE OB_BOX_2
+}
+DEF OBSTACLE_CONTAINER_1 Solid {
+  translation 2.9997549597357427 -0.00012231594568772673 0.08353296628733023
+  rotation -0.028188558267795535 -0.029129684166800347 0.9991780955781235 1.570967177833389
+  children [
+    Shape {
+      appearance CorrugatedMetal {
+        colorOverride 0.4 0.7 1
+      }
+      geometry Box {
+        size 1.25 0.3 0.3
+      }
+    }
+  ]
+  name "obstacle_2(2)"
+  boundingObject Box {
+    size 1.25 0.3 0.3
+  }
+  physics Physics {
+  }
+}
+DEF OBSTACLE_CONTAINER_2 Solid {
+  translation 2.600288339040744 -0.010145686820370687 0.08353907201417751
+  rotation 0.02922081248919575 0.02837842748357193 0.9991700600853846 1.5708682483237286
+  children [
+    Shape {
+      appearance CorrugatedMetal {
+        colorOverride 1 0.3 0
+      }
+      geometry Box {
+        size 1.25 0.3 0.3
+      }
+    }
+  ]
+  name "obstacle_2(3)"
+  boundingObject Box {
+    size 1.25 0.3 0.3
+  }
+  physics Physics {
+  }
+}
+DEF OBSTACLE_CONTAINER_3 Solid {
+  translation 2.800044573159117 -0.02047927854667175 0.355447944124496
+  rotation 0.0006637942018642975 -0.0006715208344651647 0.9999995542184139 1.5701422410857397
+  children [
+    Shape {
+      appearance CorrugatedMetal {
+        colorOverride 1 1 0
+      }
+      geometry Box {
+        size 1.25 0.3 0.3
+      }
+    }
+  ]
+  name "obstacle_2(4)"
+  boundingObject Box {
+    size 1.25 0.3 0.3
+  }
+  physics Physics {
+  }
+}
+DEF OBSTACLE_CONTAINER_4 Solid {
+  translation 2.06793 1.80063 0.10585499999999996
+  rotation 8.153784604290112e-18 6.869580396740596e-17 0.9999999999999999 2.6172053071795864
+  children [
+    Shape {
+      appearance CorrugatedMetal {
+        colorOverride 1 1 0
+      }
+      geometry Box {
+        size 1.25 0.3 0.3
+      }
+    }
+  ]
+  name "obstacle_2(5)"
+  boundingObject Box {
+    size 1.25 0.3 0.3
+  }
+  physics Physics {
+  }
+}
+DEF OBSTACLE_CONTAINER_5 Solid {
+  translation 0.037 0.5 0.10585499999999996
+  rotation 2.8145858836982513e-18 -1.0759804262037957e-17 1 3.1408
+  children [
+    Shape {
+      appearance CorrugatedMetal {
+        colorOverride 0 0.7 0
+      }
+      geometry Box {
+        size 1.25 0.3 0.3
+      }
+    }
+  ]
+  name "obstacle_2(7)"
+  boundingObject Box {
+    size 1.25 0.3 0.3
+  }
+  physics Physics {
+  }
+}
 DEF SAFETY_LINE_NS Solid {
-  translation 0 0 0.001
+  translation 0 1 0.001
   children [
     Shape {
       appearance DEF TAPE_YELLOW PBRAppearance {
@@ -265,8 +435,40 @@ DEF SAFETY_LINE_NS Solid {
   ]
   name "safety_line_ns"
 }
-DEF SAFETY_LINE_EW Solid {
+DEF SAFETY_LINE_NS Solid {
   translation 0 0 0.001
+  children [
+    Shape {
+      appearance DEF TAPE_YELLOW PBRAppearance {
+        baseColor 0.92 0.82 0.08
+        roughness 0.85
+        metalness 0
+      }
+      geometry Box {
+        size 3.6 0.03 0.002
+      }
+    }
+  ]
+  name "safety_line_ns_2"
+}
+DEF SAFETY_LINE_NS Solid {
+  translation 0 -1 0.001
+  children [
+    Shape {
+      appearance DEF TAPE_YELLOW PBRAppearance {
+        baseColor 0.92 0.82 0.08
+        roughness 0.85
+        metalness 0
+      }
+      geometry Box {
+        size 3.6 0.03 0.002
+      }
+    }
+  ]
+  name "safety_line_ns_3"
+}
+DEF SAFETY_LINE_EW Solid {
+  translation 1.8 0 0.001
   children [
     Shape {
       appearance USE TAPE_YELLOW
@@ -278,7 +480,8 @@ DEF SAFETY_LINE_EW Solid {
   name "safety_line_ew"
 }
 DEF CARGO_JAMJAR_A Solid {
-  translation -0.6 0.35 0.045
+  translation -1.699686274121805 1.1997426746714803 0.04499140923078136
+  rotation 0.5521508152929349 0.5451974012371389 0.6307846469720212 0.00038795004402400647
   children [
     Shape {
       appearance PBRAppearance {
@@ -323,7 +526,8 @@ DEF CARGO_JAMJAR_A Solid {
   ]
 }
 DEF CARGO_JAMJAR_B Solid {
-  translation 0.8 0.35 0.045
+  translation 2.69031209641417 2.659339417891254 0.04498879109784973
+  rotation -0.2418639309477076 0.7525917148838469 -0.6124602432768291 0.00030442699798037217
   children [
     Shape {
       appearance PBRAppearance {
@@ -360,8 +564,9 @@ DEF CARGO_JAMJAR_B Solid {
     0.45 0.28 0.08
   ]
 }
-DEF CARGO_BISCUIT Solid {
-  translation 0.8 -0.35 0.03
+DEF CARGO_BISCUIT_A Solid {
+  translation 3.0598861938141355 -1.7299676052739197 0.029941139999999984
+  rotation -4.892408733493754e-12 3.2473353132259446e-12 0.9999999999999999 1.395837627651312e-05
   children [
     Shape {
       appearance PBRAppearance {
@@ -399,8 +604,49 @@ DEF CARGO_BISCUIT Solid {
     0.42 0.35 0.2
   ]
 }
+DEF CARGO_BISCUIT_B Solid {
+  translation 0.39 1.9 0.029941139999999995
+  rotation -0.1101874253600012 -0.11018742536021285 -0.9877841173986458 1.4329982319547475e-16
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.42 0.35 0.2
+        roughness 0.92
+        metalness 0
+      }
+      geometry DEF BISCUIT_GEOM Box {
+        size 0.12 0.18 0.06
+      }
+    }
+    Pose {
+      translation 0 0 0.031
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.6 0.15 0.1
+            roughness 0.85
+            metalness 0
+          }
+          geometry Box {
+            size 0.08 0.12 0.001
+          }
+        }
+      ]
+    }
+  ]
+  name "biscuit_box(1)"
+  boundingObject USE BISCUIT_GEOM
+  physics Physics {
+    density -1
+    mass 0.15
+  }
+  recognitionColors [
+    0.42 0.35 0.2
+  ]
+}
 DEF CARGO_APPLE Solid {
-  translation -0.6 -0.35 0.045
+  translation 3.327611062397665 -0.10113952799028078 0.044811647999999975
+  rotation 0.7462621031949136 0.4833503106343025 -0.4576738473463689 -2.6090992830724815
   children [
     Shape {
       appearance PBRAppearance {
@@ -456,7 +702,8 @@ DEF CARGO_APPLE Solid {
   ]
 }
 DEF CARGO_CAN Solid {
-  translation 0.15 0 0.055
+  translation 1.7000002484044234 1.20000160226181 0.05498319093353637
+  rotation 0.6401108128313919 -8.695713768041166e-05 0.7682825910658078 0.0009916241114524842
   children [
     Shape {
       appearance PBRAppearance {
@@ -509,7 +756,8 @@ DEF CARGO_CAN Solid {
   ]
 }
 DEF CARGO_OILBARREL_A Solid {
-  translation -1.5 0 0.07
+  translation -0.9411962737061821 -2.2262244690189994 0.06993795964655328
+  rotation -0.007959055498866701 0.0019944394259894154 -0.9999663372568809 0.014731755077205332
   children [
     Shape {
       appearance PBRAppearance {
@@ -577,7 +825,8 @@ DEF CARGO_OILBARREL_A Solid {
   ]
 }
 DEF CARGO_OILBARREL_B Solid {
-  translation 1.5 0 0.07
+  translation 1.759564597097269 -0.5489185858303651 0.06997163710917419
+  rotation 0.43247405348947304 0.43688126353124696 -0.788733766637213 0.0011260925882763929
   children [
     Shape {
       appearance PBRAppearance {
@@ -638,8 +887,8 @@ DEF CARGO_OILBARREL_B Solid {
   ]
 }
 DEF SORTING_ROBOT Robot {
-  translation 0 0 0.05
-  rotation 0 0 1 1.5708
+  translation 0.46435326997395227 -0.30007768862538514 0.004527934718154637
+  rotation 0.028493552537287522 -5.625426067787295e-06 0.9995939762884526 3.141223910332777
   children [
     Solid {
       translation 0 0 0.05
@@ -677,6 +926,7 @@ DEF SORTING_ROBOT Robot {
     }
     HingeJoint {
       jointParameters HingeJointParameters {
+        position 483.52577497783057
         axis 0 1 0
         anchor 0 0.09 0.025
       }
@@ -691,7 +941,7 @@ DEF SORTING_ROBOT Robot {
       ]
       endPoint Solid {
         translation 0 0.09 0.025
-        rotation 1 0 0 1.5708
+        rotation -0.9807823152725765 0.13795997648621677 -0.13796048324243718 4.692981780663132
         children [
           DEF WHEEL Shape {
             appearance PBRAppearance {
@@ -715,6 +965,7 @@ DEF SORTING_ROBOT Robot {
     }
     HingeJoint {
       jointParameters HingeJointParameters {
+        position 563.2202627403485
         axis 0 1 0
         anchor 0 -0.09 0.025
       }
@@ -729,7 +980,7 @@ DEF SORTING_ROBOT Robot {
       ]
       endPoint Solid {
         translation 0 -0.09 0.025
-        rotation 1 0 0 1.5708
+        rotation 0.31407280992929787 -0.671325166811627 0.6713276327311847 2.5329605411421903
         children [
           USE WHEEL
         ]

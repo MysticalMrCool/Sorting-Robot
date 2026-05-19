@@ -83,32 +83,46 @@ except Exception:
 # easy to reason about for the report.
 # ---------------------------------------------------------------------------
 
-ARENA_BOUNDS = (-2.0, -1.5, 2.0, 1.5)  # xmin, ymin, xmax, ymax
+ARENA_BOUNDS = (-3.5, -3.0, 3.5, 3.0)  # xmin, ymin, xmax, ymax
 GRID_RESOLUTION = 0.1
 ROBOT_RADIUS = 0.11
 
-# (p1, p2) axis-aligned boxes - same as OBSTACLE_1 / OBSTACLE_2 in the .wbt
+# (p1, p2) axis-aligned boxes - ((xmin, ymin), (xmax, ymax))
 STATIC_OBSTACLES = [
-    ((-0.4, 0.55), (0.4, 0.65)),   # obstacle_1
-    ((-0.4, -0.65), (0.4, -0.55)),  # obstacle_2
+    # Shipping Containers
+    ((-0.64, 0.33), (0.68, 0.69)),   # Container 5 (Green Middle)
+    ((1.60, 1.34), (2.53, 2.26)),    # Container 4 (Yellow Angled)
+    ((2.43, -0.65), (3.19, 0.62)),   # Containers 1-3 (Combined Block)
+    
+    # Warehouse Racks
+    ((0.05, -2.61), (2.09, -2.47)),  # Rack 1
+    ((-1.65, -2.61), (-0.76, -2.48)), # Rack 2
+    ((-3.13, -2.62), (-2.38, -2.23)), # Rack 3
+    ((-1.04, 2.29), (1.03, 2.42)),   # Rack 4
 ]
 
 # Drop zone world positions - must match the .wbt translations
 DROP_ZONES = {
-    "drop_fragile":   (-1.6, 1.1),
-    "drop_standard":  (1.6, 1.1),
-    "drop_hazardous": (-1.6, -1.1),
-    "drop_unknown":   (1.6, -1.1),
+    "drop_fragile":   (-3.0, 1.5),
+    "drop_standard":  (-3.0, 0.5),
+    "drop_hazardous": (-3.0, -0.5),
+    "drop_unknown":   (-3.0, -1.5),
 }
 
 # Patrol waypoints - figure-8 that sweeps the perimeter AND the centre
 PATROL_WAYPOINTS = [
-    (-1.2, -0.9),
-    ( 0.0,  0.0),   # cut through the middle
-    ( 1.2, -0.9),
-    ( 1.2,  0.9),
-    ( 0.0,  0.0),   # cut through again from the other side
-    (-1.2,  0.9),
+    (-2.13, -0.39),
+    (-2.23, -2.05),
+    ( 1.68, -1.73),
+    ( 1.73, -0.06),
+    ( 1.72,  1.29),
+    (-0.03,  1.95),
+    (-1.84,  1.56),
+    (-1.98,  2.59),
+    ( 2.85,  2.55),
+    ( 3.29,  0.02),
+    ( 2.10, -1.47),
+    ( 0.00, -0.13),
 ]
 
 # Distance at which the robot considers a Recognition object "visible"
@@ -118,7 +132,8 @@ VISIBLE_RANGE = 1.2
 CARGO_DEF_NAMES = [
     "CARGO_JAMJAR_A",
     "CARGO_JAMJAR_B",
-    "CARGO_BISCUIT",
+    "CARGO_BISCUIT_A",
+    "CARGO_BISCUIT_B",
     "CARGO_APPLE",
     "CARGO_CAN",
     "CARGO_OILBARREL_A",
@@ -175,6 +190,16 @@ class RobotAPI:
         self.compass = supervisor.getDevice("compass")
         self.compass.enable(self.time_step)
 
+        # --- Mouse API for easy coordinate mapping (helps debugging - Ali) --------------------------
+        try:
+            self.mouse = supervisor.getMouse()
+            self.mouse.enable(self.time_step)
+            self.mouse.enable3dPosition()
+            self._last_click = False
+        except Exception as exc:
+            _boot_log(f"WARNING: Mouse API not enabled: {exc}")
+            self.mouse = None
+
         # --- Supervisor handles ---------------------------------------------
         self.self_node = supervisor.getSelf()
         self.cargo_nodes = {}
@@ -198,6 +223,14 @@ class RobotAPI:
         """Called once at the top of every tick by the main loop."""
         self.distance_left_reading = _ds_to_metres(self.ds_left.getValue())
         self.distance_right_reading = _ds_to_metres(self.ds_right.getValue())
+        
+        # Check mouse clicks!
+        if self.mouse:
+            state = self.mouse.getState()
+            # Only print once per click (when it goes from False to True)
+            if state.left and not self._last_click:
+                self.log(f"🖱️ MOUSE CLICKED: ({state.x:.2f}, {state.y:.2f})")
+            self._last_click = state.left
 
     def read_distance_left(self) -> float:
         return self.distance_left_reading
