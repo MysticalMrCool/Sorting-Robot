@@ -75,7 +75,8 @@ except Exception as exc:
 CARGO_CATEGORIES = {
     "CARGO_JAMJAR_A":    "fragile",
     "CARGO_JAMJAR_B":    "fragile",
-    "CARGO_BISCUIT":     "fragile",
+    "CARGO_BISCUIT_A":   "fragile",
+    "CARGO_BISCUIT_B":   "fragile",
     "CARGO_APPLE":       "standard",
     "CARGO_CAN":         "standard",
     "CARGO_OILBARREL_A": "hazardous",

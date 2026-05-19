@@ -59,8 +59,10 @@ CLASSIFY_FRAME_DISTANCES = [0.40, 0.35, 0.30, 0.25]
 PICKUP_RADIUS = 0.25              # supervisor teleport kicks in inside this
 DELIVERY_RADIUS = 0.30            # close enough to the drop pad to release
 WAYPOINT_RADIUS = 0.25            # patrol waypoint reached tolerance
-CRUISE_SPEED = 8.0                # rad/s on wheels (Doubled from 4.0 for speed!)
-TURN_SPEED = 5.0                  # (Doubled from 2.5)
+CRUISE_SPEED = 6.0                # rad/s on wheels (1.5x original 4.0; full 8.0
+                                  # cut AVOID reaction window in half at the
+                                  # fixed 0.18 m OBSTACLE_STOP_DISTANCE).
+TURN_SPEED = 3.5                  # 1.4x original 2.5 for the same reason
 CLASSIFY_DURATION_MS = 400        # dwell after stopping (camera settle time)
 PICKUP_DURATION_MS = 600
 FAIL_SAFE_DURATION_MS = 1500

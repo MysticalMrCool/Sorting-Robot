@@ -40,6 +40,10 @@ def _boot_log(msg: str) -> None:
 
 _boot_log("controller starting")
 
+# Module-level debug toggle for the mouse-click coordinate logger.
+# Off in submitted builds so the demo console stays clean.
+MOUSE_DEBUG = False
+
 # --- Webots imports ---------------------------------------------------------
 
 try:
@@ -224,12 +228,13 @@ class RobotAPI:
         self.distance_left_reading = _ds_to_metres(self.ds_left.getValue())
         self.distance_right_reading = _ds_to_metres(self.ds_right.getValue())
         
-        # Check mouse clicks!
-        if self.mouse:
+        # Mouse-click coordinate logger - dev tool for laying out the world.
+        # Gated behind MOUSE_DEBUG so it stays silent in the demo build.
+        if MOUSE_DEBUG and self.mouse:
             state = self.mouse.getState()
             # Only print once per click (when it goes from False to True)
             if state.left and not self._last_click:
-                self.log(f"🖱️ MOUSE CLICKED: ({state.x:.2f}, {state.y:.2f})")
+                self.log(f"[mouse] clicked at ({state.x:.2f}, {state.y:.2f})")
             self._last_click = state.left
 
     def read_distance_left(self) -> float:
