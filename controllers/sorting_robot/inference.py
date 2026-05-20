@@ -27,7 +27,23 @@ import os
 from typing import Any, Optional
 
 # Debug logging toggle — set True for per-frame classification output
-DEBUG = False
+DEBUG = True
+
+# Open-set confidence threshold. Per-frame predictions below this value are
+# returned as "unknown" rather than committing to a category. Tightening this
+# trades a small risk of legit items being routed to drop_unknown for a much
+# higher likelihood of OOD items (objects the CNN was never trained on)
+# correctly falling out of the trained classes.
+UNKNOWN_CONFIDENCE_THRESHOLD = 0.65
+
+# Softmax temperature. Logits are divided by this before softmax, which
+# flattens the output distribution. T = 1.0 is the standard "no calibration"
+# setting; raising T softens the CNN's overconfidence so the threshold above
+# can actually fire on out-of-distribution inputs. Tune this empirically by
+# observing the per-frame confidences in the DEBUG output: pick the smallest
+# T that drags OOD-item confidence below the threshold while leaving known
+# items comfortably above it.
+SOFTMAX_TEMPERATURE = 1.0
 
 from model import CATEGORIES, INPUT_SIZE
 
@@ -167,12 +183,12 @@ class Classifier:
     def _classify_cnn(self, image: Any) -> tuple:
         tensor = self._to_tensor(image)
         with torch.no_grad():
-            logits = self.model(tensor)
+            logits = self.model(tensor) / SOFTMAX_TEMPERATURE
             probs = torch.softmax(logits, dim=1).squeeze(0)
             confidence, idx = torch.max(probs, dim=0)
         conf_f = float(confidence)
         pred = CATEGORIES[int(idx)]
-        if conf_f < 0.5:
+        if conf_f < UNKNOWN_CONFIDENCE_THRESHOLD:
             return ("unknown", conf_f)
         return (pred, conf_f)
 
@@ -195,15 +211,20 @@ class Classifier:
             img = _resize_nearest(img, INPUT_SIZE, INPUT_SIZE)
         # (H, W, 3) → (3, H, W) contiguous float32
         x = np.ascontiguousarray(img.transpose(2, 0, 1))
-        logits = _np_forward(x, self._np_weights)
+        logits = _np_forward(x, self._np_weights) / SOFTMAX_TEMPERATURE
         probs = _np_softmax(logits)
         idx = int(np.argmax(probs))
         conf = float(probs[idx])
-        # Debug: log all class probabilities
+        # Debug: log raw logits AND post-temperature probabilities. Raw
+        # logits show how strongly the CNN is activating for each class
+        # before any softening; that's the signal you need to pick a
+        # sensible SOFTMAX_TEMPERATURE.
         if DEBUG:
+            raw_logits = _np_forward(x, self._np_weights)
+            logit_str = ", ".join(f"{CATEGORIES[i]}={raw_logits[i]:+.2f}" for i in range(len(CATEGORIES)))
             prob_str = ", ".join(f"{CATEGORIES[i]}={probs[i]:.3f}" for i in range(len(CATEGORIES)))
-            print(f"[inference] numpy_cnn: [{prob_str}] -> {CATEGORIES[idx]} ({conf:.3f})", flush=True)
-        if conf < 0.5:
+            print(f"[inference] numpy_cnn logits: [{logit_str}]  probs: [{prob_str}] -> {CATEGORIES[idx]} ({conf:.3f})", flush=True)
+        if conf < UNKNOWN_CONFIDENCE_THRESHOLD:
             return ("unknown", conf)
         return (CATEGORIES[idx], conf)
 

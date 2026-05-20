@@ -75,8 +75,7 @@ except Exception as exc:
 CARGO_CATEGORIES = {
     "CARGO_JAMJAR_A":    "fragile",
     "CARGO_JAMJAR_B":    "fragile",
-    "CARGO_BISCUIT_A":   "fragile",
-    "CARGO_BISCUIT_B":   "fragile",
+    "CARGO_BISCUIT":     "fragile",
     "CARGO_APPLE":       "standard",
     "CARGO_CAN":         "standard",
     "CARGO_OILBARREL_A": "hazardous",
@@ -84,6 +83,12 @@ CARGO_CATEGORIES = {
 }
 
 MAX_PER_CLASS = 500          # target frames per category
+# The unknown class is intentionally larger -- it needs to absorb both the
+# empty-arena background poses AND the new wall-facing distractor poses.
+# Outlier exposure: enriching unknown with diverse non-cargo views teaches
+# the CNN a generalised 'not one of the three trained categories' feature,
+# which is what gives us reliable OOD detection on untrained items.
+UNKNOWN_MAX_PER_CLASS = 800
 ROBOT_Z = 0.05              # spawn height (matches world file)
 SETTLE_STEPS = 3            # sim steps after teleport for camera to update
 
@@ -94,23 +99,34 @@ JITTER_N = 2                # extra jittered copies per valid base pose
 JITTER_POS = 0.03           # position jitter (metres)
 JITTER_HDG = 0.08           # heading jitter (radians)
 
-# Arena interior limits (inside walls with margin for robot body)
-AX_MIN, AY_MIN = -1.70, -1.20
-AX_MAX, AY_MAX = 1.70, 1.20
+# Operable arena bounds. The actual arena (ARENA_BOUNDS in sorting_robot.py)
+# is (-3.5, -3.0, 3.5, 3.0); we shrink by a small margin so the robot's body
+# stays clear of the walls when teleported here. These bounds are used for
+# BOTH the cargo orbit generator AND the wall-facing distractor poses.
+AX_MIN, AY_MIN = -3.2, -2.7
+AX_MAX, AY_MAX = 3.35, 2.7
+WALL_XMIN, WALL_YMIN = AX_MIN, AY_MIN
+WALL_XMAX, WALL_YMAX = AX_MAX, AY_MAX
+WALL_EDGE_OFFSET = 0.35     # how far from the wall to stand when facing it
 
-# Static obstacle bounding boxes (padded for robot clearance)
+# Static obstacle bounding boxes (axis-aligned, world coordinates).
+# These mirror STATIC_OBSTACLES in sorting_robot.py with a small inflation
+# for robot clearance so the orbit generator doesn't teleport us inside one.
 STATIC_OBS = [
-    ((-0.52, 0.42), (0.52, 0.78)),   # OBSTACLE_1 north bar
-    ((-0.52, -0.78), (0.52, -0.42)),  # OBSTACLE_2 south bar
+    # Shipping containers
+    ((-0.74, 0.23), (0.78, 0.79)),    # Container 5 (Green Middle)
+    ((1.50, 1.24), (2.63, 2.36)),     # Container 4 (Yellow Angled)
+    ((2.33, -0.75), (3.29, 0.72)),    # Containers 1-3 (Combined Block)
+    # Warehouse racks
+    ((-0.05, -2.71), (2.19, -2.37)),  # Rack 1
+    ((-1.75, -2.71), (-0.66, -2.38)), # Rack 2
+    ((-3.23, -2.72), (-2.28, -2.13)), # Rack 3
+    ((-1.14, 2.19), (1.13, 2.52)),    # Rack 4
 ]
 
-# Corner shelf exclusion zones
-SHELF_ZONES = [
-    ((1.60,  0.12), (1.96,  0.88)),  # SHELF_NE
-    ((-1.96, 0.12), (-1.60, 0.88)),  # SHELF_NW
-    ((1.60, -0.88), (1.96, -0.12)),  # SHELF_SE
-    ((-1.96, -0.88), (-1.60, -0.12)),  # SHELF_SW
-]
+# Older 'shelf zone' list is no longer needed -- the current arena uses the
+# racks above instead. Kept empty for backward-compatible iteration sites.
+SHELF_ZONES = []
 
 # Don't teleport inside another cargo item
 CARGO_CLEARANCE = 0.14
@@ -191,6 +207,43 @@ def _build_bg_poses(cargo_pos: dict) -> list:
     return poses
 
 
+def _build_wall_poses() -> list:
+    """
+    Close-up wall-facing poses spanning all four walls. These produce
+    'unknown' frames that contain wall texture, edges, and unusual close-up
+    visual content -- a much harder negative class than empty arena floor.
+
+    This is the outlier-exposure piece: by enriching the unknown class with
+    diverse non-cargo views, the CNN learns a generalised 'not one of the
+    trained categories' feature. Any untrained item (e.g. the held-out
+    traffic cone) should then activate this feature at inference time.
+    """
+    poses = []
+    eo = WALL_EDGE_OFFSET
+    # North wall (walk along x, stand at y=ymax-eo, face north)
+    x = WALL_XMIN + 0.5
+    while x < WALL_XMAX - 0.5:
+        poses.append((x, WALL_YMAX - eo, math.pi / 2))
+        x += 0.4
+    # South wall (face south)
+    x = WALL_XMIN + 0.5
+    while x < WALL_XMAX - 0.5:
+        poses.append((x, WALL_YMIN + eo, -math.pi / 2))
+        x += 0.4
+    # East wall (face east)
+    y = WALL_YMIN + 0.5
+    while y < WALL_YMAX - 0.5:
+        poses.append((WALL_XMAX - eo, y, 0.0))
+        y += 0.4
+    # West wall (face west)
+    y = WALL_YMIN + 0.5
+    while y < WALL_YMAX - 0.5:
+        poses.append((WALL_XMIN + eo, y, math.pi))
+        y += 0.4
+    random.shuffle(poses)
+    return poses
+
+
 # ---------------------------------------------------------------------------
 # Teleportation
 # ---------------------------------------------------------------------------
@@ -263,7 +316,8 @@ def _capture(camera, supervisor, counts: dict, known_label: str = None) -> bool:
         label = known_label
     else:
         label = _label_from_recognition(supervisor, camera, w, h)
-    if counts[label] >= MAX_PER_CLASS:
+    cap = UNKNOWN_MAX_PER_CLASS if label == 'unknown' else MAX_PER_CLASS
+    if counts[label] >= cap:
         return False
 
     idx = counts[label] + 1
@@ -283,6 +337,42 @@ def _capture(camera, supervisor, counts: dict, known_label: str = None) -> bool:
 def main() -> None:
     supervisor = Supervisor()
     time_step = int(supervisor.getBasicTimeStep())
+
+    # Wipe any frames left over from previous data-collection runs. Without
+    # this, partial new runs leave stale PNGs interleaved with fresh ones
+    # and training pulls in data from old arena layouts. Each run starts
+    # from frame_00001.png, so without clearing we'd silently retain whatever
+    # had a higher index from the previous run.
+    if os.path.isdir(DATA_ROOT):
+        wiped = 0
+        for cat_dir in ("fragile", "standard", "hazardous", "unknown"):
+            cat_path = os.path.join(DATA_ROOT, cat_dir)
+            if not os.path.isdir(cat_path):
+                continue
+            for fname in os.listdir(cat_path):
+                if fname.startswith("frame_") and fname.endswith(".png"):
+                    try:
+                        os.remove(os.path.join(cat_path, fname))
+                        wiped += 1
+                    except OSError:
+                        pass
+        if wiped:
+            _log(f'cleared {wiped} stale frames from previous run')
+
+    # Outlier-exposure note: if any 'test' / held-out items (e.g. CARGO_CONE)
+    # are still present in the scene, they will appear in some wall and
+    # background frames and get labelled 'unknown' via Recognition fallthrough.
+    # That'd defeat the held-out test. Remove or move them out of the arena
+    # before running data collection.
+    test_items_in_scene = []
+    for test_def in ("CARGO_CONE",):
+        if supervisor.getFromDef(test_def) is not None:
+            test_items_in_scene.append(test_def)
+    if test_items_in_scene:
+        _log(f'WARNING: held-out test items present in scene: {test_items_in_scene}')
+        _log("WARNING: remove them from the scene tree (or move out of arena)")
+        _log('WARNING: before running data collection, otherwise they will be')
+        _log("WARNING: trained as 'unknown' and stop being a real OOD test.")
 
     camera = supervisor.getDevice("camera")
     camera.enable(time_step)
@@ -326,7 +416,7 @@ def main() -> None:
         cat = CARGO_CATEGORIES[def_name]
         if counts[cat] >= MAX_PER_CLASS:
             continue
-        if all(v >= MAX_PER_CLASS for v in counts.values()):
+        if all(counts[c] >= (UNKNOWN_MAX_PER_CLASS if c == 'unknown' else MAX_PER_CLASS) for c in counts):
             break
 
         _teleport(self_node, trans_field, rot_field, px, py, heading)
@@ -344,7 +434,7 @@ def main() -> None:
 
     # --- Phase 2: Background for 'unknown' class ---------------------------
     for bx, by, heading in bg_poses:
-        if counts["unknown"] >= MAX_PER_CLASS:
+        if counts["unknown"] >= UNKNOWN_MAX_PER_CLASS:
             break
 
         _teleport(self_node, trans_field, rot_field, bx, by, heading)
@@ -352,6 +442,25 @@ def main() -> None:
             if supervisor.step(time_step) == -1:
                 return
 
+        if _capture(camera, supervisor, counts):
+            saved += 1
+            if saved % 100 == 0:
+                _log(f"  progress ({saved} saved): {counts}")
+
+    _log(f"after background phase: {counts}")
+
+    # --- Phase 3: Wall-facing distractor poses for outlier exposure -------
+    # These enrich the 'unknown' class with diverse close-up wall/edge views
+    # so the CNN learns a generalised 'not trained cargo' feature.
+    wall_poses = _build_wall_poses()
+    _log(f"phase 3: {len(wall_poses)} wall-facing distractor poses")
+    for wx, wy, heading in wall_poses:
+        if counts['unknown'] >= UNKNOWN_MAX_PER_CLASS:
+            break
+        _teleport(self_node, trans_field, rot_field, wx, wy, heading)
+        for _ in range(SETTLE_STEPS):
+            if supervisor.step(time_step) == -1:
+                return
         if _capture(camera, supervisor, counts):
             saved += 1
             if saved % 100 == 0:

@@ -67,6 +67,13 @@ CLASSIFY_DURATION_MS = 400        # dwell after stopping (camera settle time)
 PICKUP_DURATION_MS = 600
 FAIL_SAFE_DURATION_MS = 1500
 
+# AVOID -> FAIL_SAFE escalation policy.  If the robot exits AVOID this many
+# times within the streak window, it's almost certainly stuck pinballing
+# between obstacles -- escalate to a full FAIL_SAFE reset rather than just
+# extending backup duration further (which can loop indefinitely).
+AVOID_STRIKES_BEFORE_FAILSAFE = 3
+AVOID_STREAK_WINDOW_MS = 5000     # gap longer than this resets the counter
+
 
 # -----------------------------------------------------------------------------
 # Category -> drop-zone mapping. The CNN in inference.py produces one of these
@@ -145,6 +152,7 @@ class PriorityFSM:
         self.active_path = []                # list of (x, y) waypoints
         self.active_path_index = 0
         self._avoid_count = 0                # consecutive avoid cycles
+        self._last_avoid_ms = -AVOID_STREAK_WINDOW_MS  # ms of last AVOID exit (force fresh streak at boot)
         self._classify_frames = []           # frames collected for classification
         self._next_frame_idx = 0             # index into CLASSIFY_FRAME_DISTANCES
         self._classify_dwell_captured = False # single dwell frame flag
@@ -347,10 +355,13 @@ class PriorityFSM:
             cat, conf = self.classifier.classify_with_confidence(frame)
             score[cat] = score.get(cat, 0.0) + conf
 
-        # Prefer the best non-unknown category if any frame produced one
-        non_unknown = {k: v for k, v in score.items() if k != "unknown"}
-        if non_unknown:
-            category = max(non_unknown, key=non_unknown.get)
+        # Winner-takes-all across ALL categories including "unknown". The
+        # open-set design intent is that if low-confidence frames repeatedly
+        # returned unknown, their accumulated vote weight should be able to
+        # beat a sporadic real-category prediction. Excluding unknown from
+        # the comparison would defeat the threshold mechanism in inference.py.
+        if score:
+            category = max(score, key=score.get)
         else:
             category = "unknown"
         votes = {k: round(v, 2) for k, v in score.items()}
@@ -474,7 +485,26 @@ class PriorityFSM:
             else:
                 self.robot.set_motors(-TURN_SPEED, TURN_SPEED)
         if not self._obstacle_blocking() and self.time_in_state_ms() > min_duration_ms:
+            # Time-window reset: if it's been long enough since the last AVOID
+            # exit, the previous streak is over - this counts as a fresh start.
+            now = self.robot.now_ms()
+            if now - self._last_avoid_ms > AVOID_STREAK_WINDOW_MS:
+                self._avoid_count = 0
             self._avoid_count += 1
+            self._last_avoid_ms = now
+
+            # Three strikes in quick succession -> escalate to FAIL_SAFE.
+            # Backup-duration scaling alone can loop forever when the robot
+            # is wedged between two obstacles; a hard reset breaks the loop.
+            if self._avoid_count >= AVOID_STRIKES_BEFORE_FAILSAFE:
+                self.robot.log(
+                    f"[FSM] FAIL_SAFE escalation after {self._avoid_count} "
+                    f"avoids in quick succession"
+                )
+                self._avoid_count = 0
+                self.enter_state(State.FAIL_SAFE)
+                return
+
             # Resume - pick the correct follow-up state based on context
             if self.robot.holding_item():
                 self.enter_state(State.PLAN_DELIVERY)

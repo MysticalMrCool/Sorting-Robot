@@ -28,9 +28,9 @@ Three-layer architecture:
 
 The FSM follows the same pattern as the Workshop 4 Smart-Security-Gate (enum states, `enter_state` helper, dwell timing). States in priority order:
 
-`FAIL_SAFE` → `AVOID` → `DELIVER` → `PLAN_DELIVERY` → `PICKUP` → `CLASSIFY` → `APPROACH_TARGET` → `PATROL` → `COMPLETE`
+`COMPLETE` → `FAIL_SAFE` → `AVOID` → `DELIVER` → `PLAN_DELIVERY` → `PICKUP` → `CLASSIFY` → `APPROACH_TARGET` → `PATROL`
 
-The robot captures 5 frames at different distances during approach, then uses a confidence-weighted vote to classify each item as fragile, standard, hazardous, or unknown. Inference runs as a pure-numpy forward pass using `model_weights.npz` — no PyTorch needed at runtime.
+The robot captures 4 frames at staggered distances during approach plus 1 settled-camera frame at the stop point, then uses a confidence-weighted vote across all 5 to classify each item as fragile, standard, hazardous, or unknown. Inference runs as a pure-numpy forward pass using `model_weights.npz` — no PyTorch needed at runtime.
 
 ## Files
 

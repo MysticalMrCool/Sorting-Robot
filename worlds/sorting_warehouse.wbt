@@ -564,7 +564,7 @@ DEF CARGO_JAMJAR_B Solid {
     0.45 0.28 0.08
   ]
 }
-DEF CARGO_BISCUIT_A Solid {
+DEF CARGO_BISCUIT Solid {
   translation 3.0598861938141355 -1.7299676052739197 0.029941139999999984
   rotation -4.892408733493754e-12 3.2473353132259446e-12 0.9999999999999999 1.395837627651312e-05
   children [
@@ -595,46 +595,6 @@ DEF CARGO_BISCUIT_A Solid {
     }
   ]
   name "biscuit_box"
-  boundingObject USE BISCUIT_GEOM
-  physics Physics {
-    density -1
-    mass 0.15
-  }
-  recognitionColors [
-    0.42 0.35 0.2
-  ]
-}
-DEF CARGO_BISCUIT_B Solid {
-  translation 0.39 1.9 0.029941139999999995
-  rotation -0.1101874253600012 -0.11018742536021285 -0.9877841173986458 1.4329982319547475e-16
-  children [
-    Shape {
-      appearance PBRAppearance {
-        baseColor 0.42 0.35 0.2
-        roughness 0.92
-        metalness 0
-      }
-      geometry DEF BISCUIT_GEOM Box {
-        size 0.12 0.18 0.06
-      }
-    }
-    Pose {
-      translation 0 0 0.031
-      children [
-        Shape {
-          appearance PBRAppearance {
-            baseColor 0.6 0.15 0.1
-            roughness 0.85
-            metalness 0
-          }
-          geometry Box {
-            size 0.08 0.12 0.001
-          }
-        }
-      ]
-    }
-  ]
-  name "biscuit_box(1)"
   boundingObject USE BISCUIT_GEOM
   physics Physics {
     density -1
@@ -886,6 +846,57 @@ DEF CARGO_OILBARREL_B Solid {
     0.7 0.2 0.1
   ]
 }
+DEF CARGO_CONE Solid {
+  translation -1.5 -0.5 0.125
+  rotation 0 0 1 0
+  children [
+    # Dark square base plate (real traffic cones have one for stability).
+    Pose {
+      translation 0 0 -0.115
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.18 0.18 0.18
+            roughness 0.8
+            metalness 0
+          }
+          geometry Box {
+            size 0.16 0.16 0.012
+          }
+        }
+      ]
+    }
+    # Main orange cone body. Recognition API matches against the orange
+    # via recognitionColors below.
+    Shape {
+      appearance PBRAppearance {
+        baseColor 1 0.5 0.1
+        roughness 0.55
+        metalness 0
+      }
+      geometry Cone {
+        bottomRadius 0.08
+        height 0.24
+        subdivision 24
+      }
+    }
+  ]
+  name "traffic_cone"
+  # Cone is not a valid Webots boundingObject geometry, so the collision
+  # envelope is a Cylinder of matching height and the cone's bottom radius
+  # (conservative -- collision footprint is at most the cone's widest part).
+  boundingObject Cylinder {
+    height 0.24
+    radius 0.08
+  }
+  physics Physics {
+    density -1
+    mass 0.2
+  }
+  recognitionColors [
+    1 0.5 0.1
+  ]
+}
 DEF SORTING_ROBOT Robot {
   translation 0.46435326997395227 -0.30007768862538514 0.004527934718154637
   rotation 0.028493552537287522 -5.625426067787295e-06 0.9995939762884526 3.141223910332777
@@ -941,7 +952,7 @@ DEF SORTING_ROBOT Robot {
       ]
       endPoint Solid {
         translation 0 0.09 0.025
-        rotation -0.9807823152725765 0.13795997648621677 -0.13796048324243718 4.692981780663132
+        rotation -0.980782315272576 0.1379599764862202 -0.13796048324243743 4.692981780663148
         children [
           DEF WHEEL Shape {
             appearance PBRAppearance {
@@ -980,7 +991,7 @@ DEF SORTING_ROBOT Robot {
       ]
       endPoint Solid {
         translation 0 -0.09 0.025
-        rotation 0.31407280992929787 -0.671325166811627 0.6713276327311847 2.5329605411421903
+        rotation 0.3140728099292977 -0.6713251668116282 0.6713276327311836 2.532960541142189
         children [
           USE WHEEL
         ]

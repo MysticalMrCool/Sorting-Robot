@@ -130,7 +130,14 @@ def train(
 
     model = SortingCNN().to(device)
     optimiser = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    criterion = nn.CrossEntropyLoss()
+    # Label smoothing prevents the CNN from being pushed to one-hot (1.0/0.0)
+    # softmax outputs during training. Without it, the model learns to grow
+    # logits to extreme magnitudes (we saw +25 to +30 raw logits on training
+    # items), which saturates softmax to 1.000 confidence on every input --
+    # including OOD items the model has never seen. Label smoothing keeps
+    # logit magnitudes moderate, so the unknown threshold in inference.py
+    # can actually fire on out-of-distribution inputs.
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
 
     best_val_acc = 0.0
     for epoch in range(1, epochs + 1):
@@ -180,6 +187,18 @@ def train(
                   flush=True)
 
     print(f"[train] done. best val_acc={best_val_acc:.3f}", flush=True)
+
+    # Export the best checkpoint as numpy weights for the runtime.
+    # Webots uses system Python, which may not have PyTorch installed --
+    # inference.py falls back to a pure-numpy forward pass using these
+    # weights. Without this export, the deployed CNN keeps using stale
+    # weights from whenever model_weights.npz was last produced.
+    npz_path = os.path.join(os.path.dirname(out_path), "model_weights.npz")
+    # Reload the best checkpoint (in case the last epoch was not the best one)
+    model.load_state_dict(torch.load(out_path, map_location=device))
+    np_weights = {k: v.detach().cpu().numpy() for k, v in model.state_dict().items()}
+    np.savez(npz_path, **np_weights)
+    print(f"[train] exported numpy weights to {npz_path}", flush=True)
 
 
 def main() -> None:

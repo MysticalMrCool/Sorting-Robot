@@ -44,6 +44,11 @@ _boot_log("controller starting")
 # Off in submitted builds so the demo console stays clean.
 MOUSE_DEBUG = False
 
+# Verbose heartbeat logging in the main control loop. Matches the
+# top-of-file DEBUG flag pattern used by behaviour_tree.py, inference.py
+# and data_collector.py. Off in submitted builds.
+DEBUG = False
+
 # --- Webots imports ---------------------------------------------------------
 
 try:
@@ -136,12 +141,15 @@ VISIBLE_RANGE = 1.2
 CARGO_DEF_NAMES = [
     "CARGO_JAMJAR_A",
     "CARGO_JAMJAR_B",
-    "CARGO_BISCUIT_A",
-    "CARGO_BISCUIT_B",
+    "CARGO_BISCUIT",
     "CARGO_APPLE",
     "CARGO_CAN",
     "CARGO_OILBARREL_A",
     "CARGO_OILBARREL_B",
+    # Out-of-distribution test item. Deliberately NOT in data_collector.py
+    # CARGO_CATEGORIES -- the CNN has never been trained on it, so it should
+    # fall under the 0.5 confidence threshold and route to drop_unknown.
+    "CARGO_CONE",
 ]
 
 
@@ -523,7 +531,6 @@ def main() -> None:
 
     # ---- Main control loop ------------------------------------------------
     # readSensors() -> updateState() -> executeState()
-    DEBUG = False
     tick_count = 0
     while supervisor.step(api.time_step) != -1:
         api.read_sensors()
