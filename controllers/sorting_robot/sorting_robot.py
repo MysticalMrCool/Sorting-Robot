@@ -148,7 +148,7 @@ CARGO_DEF_NAMES = [
     "CARGO_OILBARREL_B",
     # Out-of-distribution test item. Deliberately NOT in data_collector.py
     # CARGO_CATEGORIES -- the CNN has never been trained on it, so it should
-    # fall under the 0.5 confidence threshold and route to drop_unknown.
+    # fall under the 0.65 confidence threshold and route to drop_unknown.
     "CARGO_CONE",
 ]
 
