@@ -27,7 +27,7 @@ import os
 from typing import Any, Optional
 
 # Debug logging toggle — set True for per-frame classification output
-DEBUG = True
+DEBUG = False
 
 # Open-set confidence threshold. Per-frame predictions below this value are
 # returned as "unknown" rather than committing to a category. Tightening this

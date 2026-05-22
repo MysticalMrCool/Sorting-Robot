@@ -28,10 +28,11 @@ Three-layer architecture (behaviour layering model from lectures):
 
 Priority selector order (highest first). The top of tick() acts as a
 priority-interrupt mechanism: higher-priority conditions can pre-empt
-the current state.
+the current state. COMPLETE is terminal: once entered, nothing
+interrupts it.
 
-    FAIL_SAFE  ->  AVOID  ->  DELIVER  ->  PLAN_DELIVERY  ->
-    PICKUP  ->  CLASSIFY  ->  APPROACH_TARGET  ->  PATROL  ->  COMPLETE
+    COMPLETE  ->  FAIL_SAFE  ->  AVOID  ->  DELIVER  ->  PLAN_DELIVERY  ->
+    PICKUP  ->  CLASSIFY  ->  APPROACH_TARGET  ->  PATROL
 
 The rule-based FSM drives behaviour; the CNN in inference.py provides the
 classification fact the FSM uses to decide which drop zone is the goal.

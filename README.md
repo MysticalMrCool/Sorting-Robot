@@ -60,3 +60,20 @@ Each module has a `DEBUG` flag at the top. Set it to `True` if you need verbose 
 **Inputs (7):** camera, ds\_left, ds\_right, gps, compass, left wheel sensor, right wheel sensor
 
 **Outputs (3):** left wheel motor, right wheel motor, supervisor teleport
+
+## Requirements Coverage
+
+How the brief's technical requirements map to this codebase.
+
+| Brief requirement | Where it lives |
+|---|---|
+| Core — 2+ inputs | 7 sensors wired in `RobotAPI.__init__` (`sorting_robot.py`) |
+| Core — 2+ outputs | Left/right wheel motors + supervisor `pick_up`/`release` (`sorting_robot.py`) |
+| Core — FSM with 4+ states | 9-state Priority FSM (`behaviour_tree.py`, `class State`) |
+| Core — Multi-condition decision logic | Priority selector at the top of `PriorityFSM.tick()` |
+| Core — Safety / fail-safe | `AVOID` state + `FAIL_SAFE` escalation after 3 strikes in 5 s; OOD items routed to `drop_unknown` via confidence threshold |
+| Core — Structured architecture | Three-layer Sense–Think–Act split: `sorting_robot.py` / `behaviour_tree.py` / `inference.py` |
+| Track B — Navigation | A\* waypoint planning + figure-8 patrol loop (`pathfinding.py`, `_do_patrol`, `_do_deliver`) |
+| Track B — Obstacle avoidance | Distance-sensor `_do_avoid` (<0.18 m) + inflated-obstacle A\* grid |
+| Track B — Perception-driven decision | CNN category drives drop-zone lookup in `CATEGORY_TO_ZONE` (`behaviour_tree.py`) |
+| Advanced — Perception (Vision-Based) | `SortingCNN` (3 conv + 2 FC) with multi-frame confidence-weighted voting, temperature-scaled softmax, outlier-exposure unknown class, three-tier runtime fallback (PyTorch → NumPy → colour histogram) |
