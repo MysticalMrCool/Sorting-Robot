@@ -1,4 +1,4 @@
-# Sorting Warehouse
+# Sorting Robot
 
 3003ICT Programming for Robotics — Assessment 1 (Track B)
 
