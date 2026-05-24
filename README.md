@@ -4,6 +4,12 @@
 
 Autonomous sorting robot in Webots R2025a. The robot patrols, classifies cargo using a CNN, plans paths with A\*, and delivers items to the correct drop zones.
 
+## Demonstration Video
+
+5-minute project demonstration:
+
+https://github.com/user-attachments/assets/6b3cbbda-fd16-4877-8187-a4ed23fe9ae5
+
 ## Setup
 
 You need **Webots R2025a** and **Python 3.10+** with `numpy` and `Pillow` installed on your system:
